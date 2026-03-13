@@ -1,0 +1,17 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/unit.gd" id="1"]
+
+[node name="Player" type="Node2D"]
+script = ExtResource("1")
+display_name = "Hero"
+is_player = true
+max_hp = 100
+max_qi = 10
+start_qi = 10
+qi_per_turn = 2
+base_move = 2
+base_attack = 10
+uses_qi = true
+fill_color = Color(0.24, 0.55, 0.96, 1)
+outline_color = Color(0.08, 0.08, 0.12, 1)
