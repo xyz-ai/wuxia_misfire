@@ -1,0 +1,115 @@
+﻿{
+	"hero": {
+		"id": "hero",
+		"display_name": "主角",
+		"is_player": true,
+		"max_hp": 110,
+		"max_qi": 12,
+		"start_qi": 10,
+		"qi_per_turn": 2,
+		"base_move": 3,
+		"base_attack": 11,
+		"uses_qi": true,
+		"skills": ["qinggong_step", "split_palm", "iron_wall", "normal_attack"],
+		"inventory": [
+			{"item_id": "qi_tonic", "quantity": 2},
+			{"item_id": "healing_balm", "quantity": 1}
+		],
+		"visuals": {
+			"battlefield_texture_path": "res://assets/battle/units/player/hero_male_01.png",
+			"portrait_texture_path": "res://assets/battle/units/player/hero_male_01.png",
+			"icon_texture_path": "res://assets/battle/units/player/hero_male_01.png",
+			"battlefield_scale": 1.0,
+			"foot_anchor_offset": [0.0, 0.0]
+		},
+		"fill_color": [0.24, 0.55, 0.96, 1.0],
+		"outline_color": [0.08, 0.08, 0.12, 1.0],
+		"faction": "江湖",
+		"personality": "steady",
+		"tags": ["swordsman"]
+	},
+	"disciple": {
+		"id": "disciple",
+		"display_name": "同伴",
+		"is_player": true,
+		"max_hp": 88,
+		"max_qi": 10,
+		"start_qi": 8,
+		"qi_per_turn": 2,
+		"base_move": 3,
+		"base_attack": 9,
+		"uses_qi": true,
+		"skills": ["qinggong_step", "iron_wall", "normal_attack"],
+		"inventory": [
+			{"item_id": "healing_balm", "quantity": 1}
+		],
+		"visuals": {
+			"battlefield_texture_path": "res://assets/battle/units/player/hero_female_01.png",
+			"portrait_texture_path": "res://assets/battle/units/player/hero_female_01.png",
+			"icon_texture_path": "res://assets/battle/units/player/hero_female_01.png",
+			"battlefield_scale": 1.0,
+			"foot_anchor_offset": [0.0, 0.0]
+		},
+		"fill_color": [0.31, 0.72, 0.88, 1.0],
+		"outline_color": [0.08, 0.14, 0.18, 1.0],
+		"faction": "江湖",
+		"personality": "loyal",
+		"tags": ["support"]
+	},
+	"bandit_raider": {
+		"id": "bandit_raider",
+		"display_name": "山匪",
+		"is_player": false,
+		"max_hp": 64,
+		"max_qi": 0,
+		"start_qi": 0,
+		"qi_per_turn": 0,
+		"base_move": 3,
+		"base_attack": 8,
+		"uses_qi": false,
+		"skills": ["normal_attack"],
+		"inventory": [
+			{"item_id": "healing_balm", "quantity": 1}
+		],
+		"visuals": {
+			"battlefield_texture_path": "res://assets/battle/ui/portraits/enemy_bandit_battle.png",
+			"portrait_texture_path": "res://assets/battle/ui/portraits/enemy_bandit_battle.png",
+			"icon_texture_path": "res://assets/battle/ui/portraits/enemy_bandit_battle.png",
+			"battlefield_scale": 1.0,
+			"foot_anchor_offset": [0.0, 0.0]
+		},
+		"fill_color": [0.82, 0.30, 0.25, 1.0],
+		"outline_color": [0.12, 0.06, 0.06, 1.0],
+		"faction": "山寨",
+		"personality": "reckless",
+		"tags": ["melee"]
+	},
+	"bandit_brute": {
+		"id": "bandit_brute",
+		"display_name": "悍匪",
+		"is_player": false,
+		"max_hp": 90,
+		"max_qi": 0,
+		"start_qi": 0,
+		"qi_per_turn": 0,
+		"base_move": 2,
+		"base_attack": 12,
+		"uses_qi": false,
+		"skills": ["iron_wall", "normal_attack"],
+		"inventory": [
+			{"item_id": "healing_balm", "quantity": 2}
+		],
+		"visuals": {
+			"battlefield_texture_path": "res://assets/battle/ui/portraits/enemy_bandit_battle.png",
+			"portrait_texture_path": "res://assets/battle/ui/portraits/enemy_bandit_battle.png",
+			"icon_texture_path": "res://assets/battle/ui/portraits/enemy_bandit_battle.png",
+			"battlefield_scale": 1.04,
+			"foot_anchor_offset": [0.0, 0.0]
+		},
+		"fill_color": [0.70, 0.24, 0.18, 1.0],
+		"outline_color": [0.16, 0.05, 0.05, 1.0],
+		"faction": "山寨",
+		"personality": "stubborn",
+		"tags": ["tank"]
+	}
+}

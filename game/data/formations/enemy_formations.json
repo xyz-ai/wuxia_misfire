@@ -1,0 +1,29 @@
+{
+	"bandit_line": {
+		"id": "bandit_line",
+		"display_name": "Bandit Line",
+		"slots": [
+			[6, 2],
+			[6, 4],
+			[7, 3]
+		]
+	},
+	"bandit_hook": {
+		"id": "bandit_hook",
+		"display_name": "Bandit Hook",
+		"slots": [
+			[5, 1],
+			[6, 3],
+			[5, 5]
+		]
+	},
+	"brute_wall": {
+		"id": "brute_wall",
+		"display_name": "Brute Wall",
+		"slots": [
+			[5, 2],
+			[6, 3],
+			[5, 4]
+		]
+	}
+}

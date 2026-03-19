@@ -1,0 +1,259 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/battle_hud.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/battle/ui/panels/bottom_hud_bar.png.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/battle/ui/icons/skill_attack.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/battle/ui/icons/status_wait.png" id="4"]
+[ext_resource type="Texture2D" path="res://assets/battle/ui/icons/item_scroll.png" id="5"]
+[ext_resource type="Texture2D" path="res://assets/battle/ui/icons/map_scroll.png" id="6"]
+[ext_resource type="Texture2D" path="res://assets/battle/ui/icons/book_manual.png" id="7"]
+[ext_resource type="Texture2D" path="res://assets/battle/ui/icons/rage_face.png" id="8"]
+
+[node name="BattleHUD" type="Control"]
+custom_minimum_size = Vector2(0, 192)
+script = ExtResource("1")
+bottom_bar_texture = ExtResource("2")
+attack_icon = ExtResource("3")
+wait_icon = ExtResource("4")
+item_icon = ExtResource("5")
+map_icon = ExtResource("6")
+manual_icon = ExtResource("7")
+rage_icon = ExtResource("8")
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Content" type="MarginContainer" parent="."]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 10
+
+[node name="Root" type="HBoxContainer" parent="Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 10
+
+[node name="PortraitPanel" type="PanelContainer" parent="Content/Root"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+
+[node name="PortraitMargin" type="MarginContainer" parent="Content/Root/PortraitPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="PortraitRoot" type="HBoxContainer" parent="Content/Root/PortraitPanel/PortraitMargin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="PortraitTexture" type="TextureRect" parent="Content/Root/PortraitPanel/PortraitMargin/PortraitRoot"]
+custom_minimum_size = Vector2(96, 114)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="InfoVBox" type="VBoxContainer" parent="Content/Root/PortraitPanel/PortraitMargin/PortraitRoot"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="NameLabel" type="Label" parent="Content/Root/PortraitPanel/PortraitMargin/PortraitRoot/InfoVBox"]
+layout_mode = 2
+text = "未选择角色"
+
+[node name="StatusTags" type="HBoxContainer" parent="Content/Root/PortraitPanel/PortraitMargin/PortraitRoot/InfoVBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="ResourceRow" type="HBoxContainer" parent="Content/Root/PortraitPanel/PortraitMargin/PortraitRoot/InfoVBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="HpSummaryLabel" type="Label" parent="Content/Root/PortraitPanel/PortraitMargin/PortraitRoot/InfoVBox/ResourceRow"]
+layout_mode = 2
+text = "生命：-"
+
+[node name="QiSummaryLabel" type="Label" parent="Content/Root/PortraitPanel/PortraitMargin/PortraitRoot/InfoVBox/ResourceRow"]
+layout_mode = 2
+text = "真气：-"
+
+[node name="StatusPanel" type="PanelContainer" parent="Content/Root"]
+custom_minimum_size = Vector2(220, 0)
+layout_mode = 2
+
+[node name="StatusMargin" type="MarginContainer" parent="Content/Root/StatusPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="StatusVBox" type="VBoxContainer" parent="Content/Root/StatusPanel/StatusMargin"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="PhaseLabel" type="Label" parent="Content/Root/StatusPanel/StatusMargin/StatusVBox"]
+layout_mode = 2
+text = "阶段：加载中"
+
+[node name="ActiveUnitLabel" type="Label" parent="Content/Root/StatusPanel/StatusMargin/StatusVBox"]
+layout_mode = 2
+text = "当前行动：无"
+
+[node name="ViewModeLabel" type="Label" parent="Content/Root/StatusPanel/StatusMargin/StatusVBox"]
+layout_mode = 2
+text = "查看模式：未选择"
+
+[node name="FacingLabel" type="Label" parent="Content/Root/StatusPanel/StatusMargin/StatusVBox"]
+layout_mode = 2
+text = "朝向：未定"
+
+[node name="HintLabel" type="Label" parent="Content/Root/StatusPanel/StatusMargin/StatusVBox"]
+layout_mode = 2
+autowrap_mode = 3
+text = ""
+
+[node name="FacingButtons" type="HBoxContainer" parent="Content/Root/StatusPanel/StatusMargin/StatusVBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="FacingUpButton" type="Button" parent="Content/Root/StatusPanel/StatusMargin/StatusVBox/FacingButtons"]
+custom_minimum_size = Vector2(36, 26)
+layout_mode = 2
+text = "上"
+
+[node name="FacingDownButton" type="Button" parent="Content/Root/StatusPanel/StatusMargin/StatusVBox/FacingButtons"]
+custom_minimum_size = Vector2(36, 26)
+layout_mode = 2
+text = "下"
+
+[node name="FacingLeftButton" type="Button" parent="Content/Root/StatusPanel/StatusMargin/StatusVBox/FacingButtons"]
+custom_minimum_size = Vector2(36, 26)
+layout_mode = 2
+text = "左"
+
+[node name="FacingRightButton" type="Button" parent="Content/Root/StatusPanel/StatusMargin/StatusVBox/FacingButtons"]
+custom_minimum_size = Vector2(36, 26)
+layout_mode = 2
+text = "右"
+
+[node name="SkillsPanel" type="PanelContainer" parent="Content/Root"]
+custom_minimum_size = Vector2(372, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SkillsMargin" type="MarginContainer" parent="Content/Root/SkillsPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="SkillsVBox" type="VBoxContainer" parent="Content/Root/SkillsPanel/SkillsMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 5
+
+[node name="SkillsTitleRow" type="HBoxContainer" parent="Content/Root/SkillsPanel/SkillsMargin/SkillsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SkillsTitle" type="Label" parent="Content/Root/SkillsPanel/SkillsMargin/SkillsVBox/SkillsTitleRow"]
+layout_mode = 2
+text = "技能"
+
+[node name="SkillsStateLabel" type="Label" parent="Content/Root/SkillsPanel/SkillsMargin/SkillsVBox/SkillsTitleRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+horizontal_alignment = 2
+text = ""
+
+[node name="SystemActions" type="HBoxContainer" parent="Content/Root/SkillsPanel/SkillsMargin/SkillsVBox"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="MoveButton" type="Button" parent="Content/Root/SkillsPanel/SkillsMargin/SkillsVBox/SystemActions"]
+custom_minimum_size = Vector2(76, 30)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "普通移动"
+
+[node name="QinggongButton" type="Button" parent="Content/Root/SkillsPanel/SkillsMargin/SkillsVBox/SystemActions"]
+custom_minimum_size = Vector2(76, 30)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "轻功"
+
+[node name="SkipMoveButton" type="Button" parent="Content/Root/SkillsPanel/SkillsMargin/SkillsVBox/SystemActions"]
+custom_minimum_size = Vector2(76, 30)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "跳过移动"
+
+[node name="EndTurnButton" type="Button" parent="Content/Root/SkillsPanel/SkillsMargin/SkillsVBox/SystemActions"]
+custom_minimum_size = Vector2(76, 30)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "结束回合"
+
+[node name="SkillGrid" type="GridContainer" parent="Content/Root/SkillsPanel/SkillsMargin/SkillsVBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+columns = 2
+
+[node name="ItemsPanel" type="PanelContainer" parent="Content/Root"]
+custom_minimum_size = Vector2(188, 0)
+layout_mode = 2
+
+[node name="ItemsMargin" type="MarginContainer" parent="Content/Root/ItemsPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="ItemsVBox" type="VBoxContainer" parent="Content/Root/ItemsPanel/ItemsMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 5
+
+[node name="ItemsTitle" type="Label" parent="Content/Root/ItemsPanel/ItemsMargin/ItemsVBox"]
+layout_mode = 2
+text = "道具"
+
+[node name="ItemsStateLabel" type="Label" parent="Content/Root/ItemsPanel/ItemsMargin/ItemsVBox"]
+layout_mode = 2
+text = ""
+
+[node name="ItemGrid" type="GridContainer" parent="Content/Root/ItemsPanel/ItemsMargin/ItemsVBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+columns = 1
+
+[node name="StatusTooltip" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 0
+mouse_filter = 2
+z_index = 20
+
+[node name="TooltipMargin" type="MarginContainer" parent="StatusTooltip"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 6
+
+[node name="TooltipLabel" type="Label" parent="StatusTooltip/TooltipMargin"]
+layout_mode = 2
+autowrap_mode = 3
+text = ""

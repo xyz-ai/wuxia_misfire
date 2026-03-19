@@ -1,0 +1,80 @@
+﻿{
+	"board_defaults": {
+		"columns": 8,
+		"rows": 8
+	},
+	"terrain_types": {
+		"plain": {
+			"blocks_ground": false,
+			"move_cost": 1,
+			"base_texture_path": "res://assets/battle/units/terrain/base/tile_ground.png",
+			"overlay_texture_path": ""
+		},
+		"stone": {
+			"blocks_ground": true,
+			"move_cost": 999,
+			"base_texture_path": "res://assets/battle/units/terrain/base/tile_ground.png",
+			"overlay_texture_path": "res://assets/battle/units/terrain/overlay/tile_rock.png"
+		},
+		"water": {
+			"blocks_ground": true,
+			"move_cost": 999,
+			"base_texture_path": "res://assets/battle/units/terrain/base/tile_ground.png",
+			"overlay_texture_path": "res://assets/battle/units/terrain/overlay/tile_water.png"
+		},
+		"grass": {
+			"blocks_ground": false,
+			"move_cost": 1,
+			"base_texture_path": "res://assets/battle/units/terrain/base/tile_ground.png",
+			"overlay_texture_path": ""
+		}
+	},
+	"action_budgets": {
+		"move": 1,
+		"action": 1
+	},
+	"stances": {
+		"default": "none",
+		"all": ["none", "youshen", "fajin", "shoushi"],
+		"counter_map": {
+			"youshen": "shoushi",
+			"shoushi": "fajin",
+			"fajin": "youshen"
+		},
+		"multipliers": {
+			"counter": 2.0,
+			"countered": 0.5,
+			"against_none": 1.5,
+			"none_attack": 1.0,
+			"neutral": 1.0
+		}
+	},
+	"statuses": {
+		"yinren": {
+			"display_name": "隐忍",
+			"max_stacks": 99,
+			"damage_bonus_per_stack": 0.1,
+			"gain_if_no_attack": 1,
+			"clear_on_attack": true
+		}
+	},
+	"charge": {
+		"damage_bonus_per_move_point": 0.03,
+		"applies_to_modes": ["ground"]
+	},
+	"qinggong": {
+		"bonus_range": 3,
+		"blocked_by_units": true,
+		"deny_enemy_back_landing": true
+	},
+	"facing": {
+		"player": [1, 0],
+		"enemy": [-1, 0]
+	},
+	"enemy_info_visibility_by_difficulty": {
+		"simple": {"show_enemy_skills": true, "show_enemy_inventory": true},
+		"normal": {"show_enemy_skills": true, "show_enemy_inventory": true},
+		"hard": {"show_enemy_skills": true, "show_enemy_inventory": false},
+		"extreme": {"show_enemy_skills": false, "show_enemy_inventory": false}
+	}
+}

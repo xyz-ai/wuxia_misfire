@@ -1,0 +1,30 @@
+﻿{
+	"qi_tonic": {
+		"id": "qi_tonic",
+		"display_name": "回气散",
+		"icon_path": "res://assets/battle/ui/icons/item_scroll.png",
+		"targeting": {"type": "self"},
+		"requirements": [
+			{"type": "budget_available", "budget": "action", "amount": 1}
+		],
+		"costs": [],
+		"effects": [
+			{"type": "modify_resource", "resource": "qi", "amount": 4}
+		],
+		"description": "回复4点真气。"
+	},
+	"healing_balm": {
+		"id": "healing_balm",
+		"display_name": "止血膏",
+		"icon_path": "res://assets/battle/ui/icons/map_scroll.png",
+		"targeting": {"type": "self"},
+		"requirements": [
+			{"type": "budget_available", "budget": "action", "amount": 1}
+		],
+		"costs": [],
+		"effects": [
+			{"type": "modify_resource", "resource": "hp", "amount": 18}
+		],
+		"description": "回复18点生命。"
+	}
+}

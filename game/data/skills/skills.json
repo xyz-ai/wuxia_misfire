@@ -1,0 +1,126 @@
+﻿{
+	"normal_attack": {
+		"id": "normal_attack",
+		"display_name": "普攻",
+		"icon_path": "res://assets/battle/ui/icons/skill_attack.png",
+		"action_type": "attack",
+		"ui_group": "attack",
+		"ui_order": 10,
+		"targeting": {
+			"type": "unit",
+			"pattern": "adjacent",
+			"range": 1,
+			"filters": ["enemy"]
+		},
+		"requirements": [
+			{"type": "budget_available", "budget": "action", "amount": 1}
+		],
+		"costs": [],
+		"pre_effects": [],
+		"resolve_effects": [
+			{"type": "damage", "formula": {"type": "skill_value", "key": "damage"}}
+		],
+		"post_effects": [
+			{"type": "consume_action", "budget": "action", "amount": 1},
+			{"type": "modify_resource", "resource": "qi", "formula": {"type": "skill_value", "key": "qi_refund"}}
+		],
+		"ai_tags": {"offense": 1.0},
+		"values": {"damage": 10, "qi_refund": 1}
+	},
+	"split_palm": {
+		"id": "split_palm",
+		"display_name": "劈山掌",
+		"icon_path": "res://assets/battle/ui/icons/skill_attack.png",
+		"action_type": "attack",
+		"ui_group": "attack",
+		"ui_order": 20,
+		"targeting": {
+			"type": "unit",
+			"pattern": "adjacent",
+			"range": 1,
+			"filters": ["enemy"]
+		},
+		"requirements": [
+			{"type": "budget_available", "budget": "action", "amount": 1},
+			{"type": "resource_at_least", "resource": "qi", "amount": 3}
+		],
+		"costs": [
+			{"type": "resource", "resource": "qi", "amount": 3}
+		],
+		"pre_effects": [
+			{"type": "set_stance", "stance": "fajin"}
+		],
+		"resolve_effects": [
+			{"type": "damage", "formula": {"type": "skill_value", "key": "damage"}}
+		],
+		"post_effects": [
+			{"type": "consume_action", "budget": "action", "amount": 1}
+		],
+		"ai_tags": {"offense": 1.2, "finisher": 0.5},
+		"values": {"damage": 18}
+	},
+	"iron_wall": {
+		"id": "iron_wall",
+		"display_name": "铁壁架",
+		"icon_path": "res://assets/battle/ui/icons/book_manual.png",
+		"action_type": "skill",
+		"ui_group": "guard",
+		"ui_order": 10,
+		"targeting": {"type": "self"},
+		"requirements": [
+			{"type": "budget_available", "budget": "action", "amount": 1},
+			{"type": "resource_at_least", "resource": "qi", "amount": 2}
+		],
+		"costs": [
+			{"type": "resource", "resource": "qi", "amount": 2}
+		],
+		"pre_effects": [
+			{"type": "set_stance", "stance": "shoushi"}
+		],
+		"resolve_effects": [],
+		"post_effects": [
+			{"type": "consume_action", "budget": "action", "amount": 1}
+		],
+		"ai_tags": {"defense": 1.0},
+		"values": {}
+	},
+	"qinggong_step": {
+		"id": "qinggong_step",
+		"display_name": "轻功",
+		"icon_path": "res://assets/battle/ui/icons/map_scroll.png",
+		"action_type": "move",
+		"ui_group": "move",
+		"ui_order": 20,
+		"targeting": {
+			"type": "cell",
+			"movement_mode": "qinggong",
+			"range_formula": {
+				"type": "add",
+				"values": [
+					{"type": "stat", "stat": "base_move"},
+					{"type": "skill_value", "key": "bonus_range"}
+				]
+			}
+		},
+		"requirements": [
+			{"type": "budget_available", "budget": "move", "amount": 1},
+			{"type": "resource_at_least", "resource": "qi", "amount": 2},
+			{"type": "flag_false", "flag": "moved_normally"},
+			{"type": "flag_false", "flag": "used_qinggong"}
+		],
+		"costs": [
+			{"type": "resource", "resource": "qi", "amount": 2}
+		],
+		"pre_effects": [
+			{"type": "set_stance", "stance": "youshen"}
+		],
+		"resolve_effects": [
+			{"type": "move_unit"}
+		],
+		"post_effects": [
+			{"type": "consume_action", "budget": "move", "amount": 1}
+		],
+		"ai_tags": {"mobility": 1.0},
+		"values": {"bonus_range": 3}
+	}
+}

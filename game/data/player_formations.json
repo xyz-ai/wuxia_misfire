@@ -1,0 +1,46 @@
+{
+	"slots": {
+		"1": {
+			"slot_index": 1,
+			"display_name": "Default Vanguard",
+			"units": [
+				{
+					"instance_id": "hero_1",
+					"template_id": "hero",
+					"cell": [1, 3]
+				},
+				{
+					"instance_id": "disciple_1",
+					"template_id": "disciple",
+					"cell": [1, 4]
+				}
+			]
+		},
+		"2": {
+			"slot_index": 2,
+			"display_name": "Single Blade",
+			"units": [
+				{
+					"instance_id": "hero_1",
+					"template_id": "hero",
+					"cell": [1, 2]
+				}
+			]
+		},
+		"3": {
+			"slot_index": 3,
+			"display_name": "Empty Slot 3",
+			"units": []
+		},
+		"4": {
+			"slot_index": 4,
+			"display_name": "Empty Slot 4",
+			"units": []
+		},
+		"5": {
+			"slot_index": 5,
+			"display_name": "Empty Slot 5",
+			"units": []
+		}
+	}
+}

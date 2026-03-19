@@ -1,0 +1,49 @@
+{
+	"id": "battle_001",
+		"name": "Roadside Ambush",
+	"board": {
+		"columns": 8,
+		"rows": 8
+	},
+	"terrain": [
+		{
+			"cell": [3, 2],
+			"type": "stone"
+		},
+		{
+			"cell": [3, 3],
+			"type": "water"
+		},
+		{
+			"cell": [4, 4],
+			"type": "stone"
+		}
+	],
+	"player": {
+		"formation_slot": 1
+	},
+	"enemies": {
+		"units": [
+			{
+				"instance_id": "bandit_a",
+				"template_id": "bandit_raider"
+			},
+			{
+				"instance_id": "bandit_b",
+				"template_id": "bandit_raider"
+			}
+		],
+		"formation_pool": ["bandit_line", "bandit_hook"]
+	},
+	"ai_difficulty": "normal",
+	"victory_conditions": [
+		{
+			"type": "defeat_all_enemies"
+		}
+	],
+	"defeat_conditions": [
+		{
+			"type": "all_players_down"
+		}
+	]
+}

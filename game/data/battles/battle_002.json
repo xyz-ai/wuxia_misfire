@@ -1,0 +1,61 @@
+{
+	"id": "battle_002",
+	"name": "Bridge Stand",
+	"board": {
+		"columns": 8,
+		"rows": 8
+	},
+	"terrain": [
+		{
+			"cell": [3, 1],
+			"type": "water"
+		},
+		{
+			"cell": [3, 2],
+			"type": "water"
+		},
+		{
+			"cell": [3, 4],
+			"type": "water"
+		},
+		{
+			"cell": [3, 5],
+			"type": "water"
+		},
+		{
+			"cell": [4, 3],
+			"type": "stone"
+		}
+	],
+	"player": {
+		"formation_slot": 1
+	},
+	"enemies": {
+		"units": [
+			{
+				"instance_id": "bandit_a",
+				"template_id": "bandit_raider"
+			},
+			{
+				"instance_id": "bandit_b",
+				"template_id": "bandit_raider"
+			},
+			{
+				"instance_id": "bandit_c",
+				"template_id": "bandit_brute"
+			}
+		],
+		"formation_pool": ["bandit_line", "brute_wall"]
+	},
+	"ai_difficulty": "hard",
+	"victory_conditions": [
+		{
+			"type": "defeat_all_enemies"
+		}
+	],
+	"defeat_conditions": [
+		{
+			"type": "all_players_down"
+		}
+	]
+}
