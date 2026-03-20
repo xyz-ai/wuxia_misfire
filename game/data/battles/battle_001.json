@@ -1,6 +1,9 @@
 {
 	"id": "battle_001",
-		"name": "Roadside Ambush",
+	"name": "Roadside Ambush",
+	"title": "路旁伏击",
+	"background_path": "res://assets/battle/background/battle_ground.png",
+	"ui_note": "先稳住阵型，再找机会切入。",
 	"board": {
 		"columns": 8,
 		"rows": 8
@@ -38,12 +41,12 @@
 	"ai_difficulty": "normal",
 	"victory_conditions": [
 		{
-			"type": "defeat_all_enemies"
+			"type": "all_enemies_defeated"
 		}
 	],
 	"defeat_conditions": [
 		{
-			"type": "all_players_down"
+			"type": "all_allies_defeated"
 		}
 	]
 }

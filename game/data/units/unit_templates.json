@@ -17,7 +17,7 @@
 		],
 		"visuals": {
 			"battlefield_texture_path": "res://assets/battle/units/player/hero_male_01.png",
-			"portrait_texture_path": "res://assets/battle/units/player/hero_male_01.png",
+			"portrait_texture_path": "res://assets/battle/ui/portraits/hero_male_portrait_placeholder.png",
 			"icon_texture_path": "res://assets/battle/units/player/hero_male_01.png",
 			"battlefield_scale": 1.0,
 			"foot_anchor_offset": [0.0, 0.0]
@@ -45,7 +45,7 @@
 		],
 		"visuals": {
 			"battlefield_texture_path": "res://assets/battle/units/player/hero_female_01.png",
-			"portrait_texture_path": "res://assets/battle/units/player/hero_female_01.png",
+			"portrait_texture_path": "res://assets/battle/ui/portraits/hero_female_portrait_placeholder.png",
 			"icon_texture_path": "res://assets/battle/units/player/hero_female_01.png",
 			"battlefield_scale": 1.0,
 			"foot_anchor_offset": [0.0, 0.0]
@@ -72,9 +72,9 @@
 			{"item_id": "healing_balm", "quantity": 1}
 		],
 		"visuals": {
-			"battlefield_texture_path": "res://assets/battle/ui/portraits/enemy_bandit_battle.png",
-			"portrait_texture_path": "res://assets/battle/ui/portraits/enemy_bandit_battle.png",
-			"icon_texture_path": "res://assets/battle/ui/portraits/enemy_bandit_battle.png",
+			"battlefield_texture_path": "res://assets/battle/units/enemy/bandit_01.png",
+			"portrait_texture_path": "res://assets/battle/ui/portraits/enemy_bandit_portrait_placeholder.png",
+			"icon_texture_path": "res://assets/battle/units/enemy/bandit_01.png",
 			"battlefield_scale": 1.0,
 			"foot_anchor_offset": [0.0, 0.0]
 		},
@@ -100,9 +100,9 @@
 			{"item_id": "healing_balm", "quantity": 2}
 		],
 		"visuals": {
-			"battlefield_texture_path": "res://assets/battle/ui/portraits/enemy_bandit_battle.png",
-			"portrait_texture_path": "res://assets/battle/ui/portraits/enemy_bandit_battle.png",
-			"icon_texture_path": "res://assets/battle/ui/portraits/enemy_bandit_battle.png",
+			"battlefield_texture_path": "res://assets/battle/units/enemy/bandit_01.png",
+			"portrait_texture_path": "res://assets/battle/ui/portraits/enemy_bandit_portrait_placeholder.png",
+			"icon_texture_path": "res://assets/battle/units/enemy/bandit_01.png",
 			"battlefield_scale": 1.04,
 			"foot_anchor_offset": [0.0, 0.0]
 		},

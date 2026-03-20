@@ -1,6 +1,10 @@
 extends Node2D
 class_name GridManager
 
+const BoardBaseRendererScript = preload("res://scripts/board/board_base_renderer.gd")
+const BoardTerrainRendererScript = preload("res://scripts/board/board_terrain_renderer.gd")
+const BoardHighlightRendererScript = preload("res://scripts/board/board_highlight_renderer.gd")
+
 const HIGHLIGHT_COLORS := {
 	"move": {
 		"fill": Color(0.30, 0.66, 0.46, 0.15),
@@ -18,6 +22,10 @@ const HIGHLIGHT_COLORS := {
 		"fill": Color(0.28, 0.14, 0.16, 0.08),
 		"line": Color(0.64, 0.34, 0.38, 0.40)
 	},
+	"target": {
+		"fill": Color(0.88, 0.74, 0.42, 0.12),
+		"line": Color(0.96, 0.84, 0.58, 0.72)
+	},
 	"cursor": {
 		"line": Color(1.00, 0.92, 0.56, 0.72),
 		"accent": Color(1.00, 0.96, 0.82, 0.54)
@@ -27,7 +35,7 @@ const HIGHLIGHT_COLORS := {
 @export var columns := 8
 @export var rows := 8
 @export var min_cell_size := 24.0
-@export var max_cell_size := 84.0
+@export var max_cell_size := 96.0
 
 var selected_cell := Vector2i(-1, -1)
 var terrain_map: Dictionary = {}
@@ -37,12 +45,16 @@ var highlights := {
 	"move": [],
 	"qinggong": [],
 	"attack": [],
-	"invalid": []
+	"invalid": [],
+	"target": []
 }
 
 var cell_size := Vector2(48.0, 48.0)
 var board_rect := Rect2(448.0, 56.0, 384.0, 384.0)
 var _reserved_rect := Rect2(48.0, 56.0, 1184.0, 384.0)
+var _base_renderer = BoardBaseRendererScript.new()
+var _terrain_renderer = BoardTerrainRendererScript.new()
+var _highlight_renderer = BoardHighlightRendererScript.new()
 
 @onready var grid_base_layer: BoardCanvasLayer = $GridBase
 @onready var terrain_layer: BoardCanvasLayer = $TerrainLayer
@@ -106,7 +118,8 @@ func clear_highlights() -> void:
 		"move": [],
 		"qinggong": [],
 		"attack": [],
-		"invalid": []
+		"invalid": [],
+		"target": []
 	}
 	_queue_highlight_layers()
 
@@ -116,7 +129,8 @@ func set_highlights(next_highlights: Dictionary) -> void:
 		"move": _to_cell_array(next_highlights.get("move", [])),
 		"qinggong": _to_cell_array(next_highlights.get("qinggong", [])),
 		"attack": _to_cell_array(next_highlights.get("attack", [])),
-		"invalid": _to_cell_array(next_highlights.get("invalid", []))
+		"invalid": _to_cell_array(next_highlights.get("invalid", [])),
+		"target": _to_cell_array(next_highlights.get("target", []))
 	}
 	_queue_highlight_layers()
 
@@ -132,105 +146,27 @@ func refresh_board_layers() -> void:
 
 
 func _draw_grid_base_layer(layer: Node2D) -> void:
-	var plain_texture := _get_plain_texture()
-	var board_backdrop := board_rect.grow(6.0)
-	layer.draw_rect(board_backdrop, Color(0.04, 0.05, 0.07, 0.08), true)
-	layer.draw_rect(board_backdrop, Color(0.82, 0.84, 0.88, 0.04), false, 1.0)
-
-	for y in range(rows):
-		for x in range(columns):
-			var cell := Vector2i(x, y)
-			var rect := _cell_rect(cell).grow(-0.5)
-			var base_color := Color(1.0, 1.0, 1.0, 0.14) if (x + y) % 2 == 0 else Color(0.94, 0.95, 0.96, 0.10)
-			layer.draw_rect(rect, base_color, true)
-			if plain_texture != null:
-				layer.draw_texture_rect(plain_texture, rect, false, Color(1.0, 1.0, 1.0, 0.82))
-
-	for x in range(columns + 1):
-		var line_x := board_rect.position.x + float(x) * cell_size.x
-		layer.draw_line(
-			Vector2(line_x, board_rect.position.y),
-			Vector2(line_x, board_rect.position.y + board_rect.size.y),
-			Color(0.12, 0.14, 0.18, 0.18),
-			1.0,
-			true
-		)
-
-	for y in range(rows + 1):
-		var line_y := board_rect.position.y + float(y) * cell_size.y
-		layer.draw_line(
-			Vector2(board_rect.position.x, line_y),
-			Vector2(board_rect.position.x + board_rect.size.x, line_y),
-			Color(0.12, 0.14, 0.18, 0.18),
-			1.0,
-			true
-		)
-
-	layer.draw_rect(board_rect, Color(0.10, 0.11, 0.14, 0.20), false, 1.0)
+	_base_renderer.draw(layer, self)
 
 
 func _draw_terrain_layer(layer: Node2D) -> void:
-	for y in range(rows):
-		for x in range(columns):
-			var cell := Vector2i(x, y)
-			var terrain_type := _terrain_type_at(cell)
-			if terrain_type == "plain":
-				continue
-
-			var terrain_rule: Dictionary = terrain_defs.get(terrain_type, {})
-			var base_texture := _load_texture(String(terrain_rule.get("base_texture_path", "")))
-			var overlay_texture := _load_texture(String(terrain_rule.get("overlay_texture_path", "")))
-			var rect := _cell_rect(cell).grow(-1.5)
-			if base_texture != null:
-				layer.draw_texture_rect(base_texture, rect, false, Color(1.0, 1.0, 1.0, 0.42))
-			if overlay_texture != null:
-				layer.draw_texture_rect(overlay_texture, rect, false, Color(1.0, 1.0, 1.0, 0.94))
-			else:
-				layer.draw_rect(rect, _terrain_fallback_color(terrain_type), true)
-			layer.draw_rect(rect, Color(0.12, 0.14, 0.18, 0.14), false, 1.0)
+	_terrain_renderer.draw(layer, self)
 
 
 func _draw_move_range_layer(layer: Node2D) -> void:
-	_draw_cells_with_style(layer, highlights.get("move", []), HIGHLIGHT_COLORS["move"])
+	_highlight_renderer.draw_move(layer, self)
 
 
 func _draw_attack_range_layer(layer: Node2D) -> void:
-	_draw_cells_with_style(layer, highlights.get("attack", []), HIGHLIGHT_COLORS["attack"])
+	_highlight_renderer.draw_attack(layer, self)
 
 
 func _draw_skill_range_layer(layer: Node2D) -> void:
-	_draw_cells_with_style(layer, highlights.get("qinggong", []), HIGHLIGHT_COLORS["qinggong"])
-	_draw_cells_with_style(layer, highlights.get("invalid", []), HIGHLIGHT_COLORS["invalid"], true)
+	_highlight_renderer.draw_skill(layer, self)
 
 
 func _draw_cursor_layer(layer: Node2D) -> void:
-	if not is_in_bounds(selected_cell):
-		return
-	var rect := _cell_rect(selected_cell).grow(-4.0)
-	layer.draw_rect(rect, Color(1.0, 0.98, 0.90, 0.04), true)
-	layer.draw_rect(rect, HIGHLIGHT_COLORS["cursor"]["line"], false, 1.5)
-	var accent := HIGHLIGHT_COLORS["cursor"]["accent"]
-	var corner := 6.0
-	layer.draw_line(rect.position, rect.position + Vector2(corner, 0.0), accent, 2.0, true)
-	layer.draw_line(rect.position, rect.position + Vector2(0.0, corner), accent, 2.0, true)
-	layer.draw_line(rect.position + Vector2(rect.size.x, 0.0), rect.position + Vector2(rect.size.x - corner, 0.0), accent, 2.0, true)
-	layer.draw_line(rect.position + Vector2(rect.size.x, 0.0), rect.position + Vector2(rect.size.x, corner), accent, 2.0, true)
-	layer.draw_line(rect.position + Vector2(0.0, rect.size.y), rect.position + Vector2(corner, rect.size.y), accent, 2.0, true)
-	layer.draw_line(rect.position + Vector2(0.0, rect.size.y), rect.position + Vector2(0.0, rect.size.y - corner), accent, 2.0, true)
-	layer.draw_line(rect.position + rect.size, rect.position + Vector2(rect.size.x - corner, rect.size.y), accent, 2.0, true)
-	layer.draw_line(rect.position + rect.size, rect.position + Vector2(rect.size.x, rect.size.y - corner), accent, 2.0, true)
-
-
-func _draw_cells_with_style(layer: Node2D, cells: Array, style: Dictionary, draw_invalid_cross: bool = false) -> void:
-	for cell in cells:
-		if not (cell is Vector2i) or not is_in_bounds(cell):
-			continue
-		var rect := _cell_rect(cell).grow(-4.0)
-		layer.draw_rect(rect, style["fill"], true)
-		layer.draw_rect(rect, style["line"], false, 1.0)
-		if draw_invalid_cross:
-			layer.draw_line(rect.position + Vector2(7.0, 7.0), rect.position + rect.size - Vector2(7.0, 7.0), style["line"], 1.0, true)
-			layer.draw_line(rect.position + Vector2(rect.size.x - 7.0, 7.0), rect.position + Vector2(7.0, rect.size.y - 7.0), style["line"], 1.0, true)
+	_highlight_renderer.draw_cursor(layer, self)
 
 
 func _cell_rect(cell: Vector2i) -> Rect2:

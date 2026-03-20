@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b6tfp1nhbpc52"
-path="res://.godot/imported/bottom_hud_bar.png.png-8d722f8c9d5f5fd3d51b505524b28dbf.ctex"
+uid="uid://c8iv85b73nxs0"
+path="res://.godot/imported/btn_end_turn.png-d2a6883021bd95e7d18f165b801e23df.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/battle/ui/panels/bottom_hud_bar.png.png"
-dest_files=["res://.godot/imported/bottom_hud_bar.png.png-8d722f8c9d5f5fd3d51b505524b28dbf.ctex"]
+source_file="res://assets/battle/ui/buttons/btn_end_turn.png"
+dest_files=["res://.godot/imported/btn_end_turn.png-d2a6883021bd95e7d18f165b801e23df.ctex"]
 
 [params]
 

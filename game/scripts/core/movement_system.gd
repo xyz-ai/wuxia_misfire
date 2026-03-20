@@ -124,10 +124,44 @@ func find_path(unit, target_cell: Vector2i, max_steps: int, movement_mode: Strin
 	return path
 
 
-func apply_move(unit, target_cell: Vector2i, movement_mode: String, max_steps: int) -> Dictionary:
-	var path = find_path(unit, target_cell, max_steps, movement_mode)
+func validate_move_destination(unit, target_cell: Vector2i, max_steps: int, movement_mode: String = "ground") -> Dictionary:
+	if unit == null or not unit.is_alive():
+		return {"ok": false, "reason": "no_active_unit"}
+	if not is_in_bounds(target_cell):
+		return {"ok": false, "reason": "out_of_bounds"}
+	if target_cell == unit.grid_position:
+		return {"ok": false, "reason": "same_cell"}
+	if max_steps <= 0:
+		return {"ok": false, "reason": "no_move_budget"}
+	if is_cell_occupied(target_cell, unit):
+		return {"ok": false, "reason": "occupied"}
+	if movement_mode == "ground" and _terrain_blocks_ground(target_cell):
+		return {"ok": false, "reason": "blocked_terrain"}
+	if movement_mode == "qinggong" and is_enemy_back_landing(unit, target_cell):
+		return {"ok": false, "reason": "enemy_back_landing"}
+
+	var path := find_path(unit, target_cell, max_steps, movement_mode)
 	if path.is_empty():
-		return {"success": false, "error": "Target cell is unreachable."}
+		return {"ok": false, "reason": "unreachable"}
+
+	return {
+		"ok": true,
+		"reason": "ok",
+		"target": target_cell,
+		"path": path,
+		"distance": maxi(path.size() - 1, 0),
+		"movement_mode": movement_mode
+	}
+
+
+func apply_move(unit, target_cell: Vector2i, movement_mode: String, max_steps: int) -> Dictionary:
+	var validation := validate_move_destination(unit, target_cell, max_steps, movement_mode)
+	if not bool(validation.get("ok", false)):
+		return {
+			"success": false,
+			"error": String(validation.get("reason", "unreachable")),
+			"reason": String(validation.get("reason", "unreachable"))
+		}
 
 	_units_by_cell.erase(_cell_key(unit.grid_position))
 	unit.set_grid_cell(target_cell)
@@ -135,8 +169,8 @@ func apply_move(unit, target_cell: Vector2i, movement_mode: String, max_steps: i
 	return {
 		"success": true,
 		"target": target_cell,
-		"path": path,
-		"distance": maxi(path.size() - 1, 0),
+		"path": validation.get("path", []),
+		"distance": int(validation.get("distance", 0)),
 		"movement_mode": movement_mode
 	}
 

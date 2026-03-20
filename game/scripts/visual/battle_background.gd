@@ -49,3 +49,20 @@ func _refresh_layout() -> void:
 	_last_viewport_size = viewport_size
 	_last_camera_position = camera_position
 	_last_camera_zoom = camera_zoom
+
+
+func set_background_texture_path(path: String, fallback_path: String = "") -> void:
+	var next_texture := _load_texture(path)
+	if next_texture == null and not fallback_path.is_empty():
+		next_texture = _load_texture(fallback_path)
+	background_texture = next_texture
+	_refresh_layout()
+
+
+func _load_texture(path: String) -> Texture2D:
+	if path.is_empty():
+		return null
+	var texture_resource = load(path)
+	if texture_resource is Texture2D:
+		return texture_resource
+	return null

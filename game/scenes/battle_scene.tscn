@@ -69,51 +69,110 @@ draw_method = &"_draw_cursor_layer"
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
-[node name="BattleTopInfo" type="PanelContainer" parent="CanvasLayer"]
+[node name="UIRoot" type="Control" parent="CanvasLayer"]
 layout_mode = 0
-anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -332.0
-offset_top = 12.0
-offset_right = -18.0
-offset_bottom = 118.0
-mouse_filter = 1
+anchor_bottom = 1.0
+mouse_filter = 2
 
-[node name="Margin" type="MarginContainer" parent="CanvasLayer/BattleTopInfo"]
+[node name="SafeArea" type="MarginContainer" parent="CanvasLayer/UIRoot"]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 24
+
+[node name="MainVBox" type="VBoxContainer" parent="CanvasLayer/UIRoot/SafeArea"]
 layout_mode = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 10
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 10
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 10
 
-[node name="VBox" type="VBoxContainer" parent="CanvasLayer/BattleTopInfo/Margin"]
+[node name="TopRow" type="HBoxContainer" parent="CanvasLayer/UIRoot/SafeArea/MainVBox"]
 layout_mode = 2
-theme_override_constants/separation = 4
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
 
-[node name="RoundLabel" type="Label" parent="CanvasLayer/BattleTopInfo/Margin/VBox"]
+[node name="BattleMetaInfo" type="PanelContainer" parent="CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow"]
+custom_minimum_size = Vector2(350, 110)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="MetaMargin" type="MarginContainer" parent="CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow/BattleMetaInfo"]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 14
+
+[node name="MetaVBox" type="VBoxContainer" parent="CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow/BattleMetaInfo/MetaMargin"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TitleLabel" type="Label" parent="CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow/BattleMetaInfo/MetaMargin/MetaVBox"]
+layout_mode = 2
+text = "战斗标题"
+
+[node name="NoteLabel" type="Label" parent="CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow/BattleMetaInfo/MetaMargin/MetaVBox"]
+layout_mode = 2
+autowrap_mode = 3
+max_lines_visible = 2
+text = ""
+
+[node name="TopSpacer" type="Control" parent="CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BattleTopInfo" type="PanelContainer" parent="CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow"]
+custom_minimum_size = Vector2(360, 132)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Margin" type="MarginContainer" parent="CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow/BattleTopInfo"]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 14
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow/BattleTopInfo/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="RoundLabel" type="Label" parent="CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow/BattleTopInfo/Margin/VBox"]
 layout_mode = 2
 text = "回合：第1回合"
 
-[node name="CurrentUnitLabel" type="Label" parent="CanvasLayer/BattleTopInfo/Margin/VBox"]
+[node name="CurrentUnitLabel" type="Label" parent="CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow/BattleTopInfo/Margin/VBox"]
 layout_mode = 2
-text = "当前角色：主角"
+text = "当前行动：主角"
 
-[node name="PhaseLabel" type="Label" parent="CanvasLayer/BattleTopInfo/Margin/VBox"]
+[node name="PhaseLabel" type="Label" parent="CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow/BattleTopInfo/Margin/VBox"]
 layout_mode = 2
-text = "阶段：等待选择行动"
+text = "当前阶段：等待选择行动"
 
-[node name="PromptLabel" type="Label" parent="CanvasLayer/BattleTopInfo/Margin/VBox"]
-custom_minimum_size = Vector2(0, 28)
+[node name="PromptLabel" type="Label" parent="CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow/BattleTopInfo/Margin/VBox"]
+custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 autowrap_mode = 3
+max_lines_visible = 2
 text = "请选择移动位置"
 
-[node name="BottomHUD" parent="CanvasLayer" instance=ExtResource("3")]
-layout_mode = 0
-anchor_right = 1.0
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 16.0
-offset_top = -208.0
-offset_right = -16.0
-offset_bottom = -16.0
+[node name="CenterSpacer" type="Control" parent="CanvasLayer/UIRoot/SafeArea/MainVBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="BottomDock" type="MarginContainer" parent="CanvasLayer/UIRoot/SafeArea/MainVBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 12
+
+[node name="BottomHUD" parent="CanvasLayer/UIRoot/SafeArea/MainVBox/BottomDock" instance=ExtResource("3")]
+layout_mode = 2
+size_flags_horizontal = 3

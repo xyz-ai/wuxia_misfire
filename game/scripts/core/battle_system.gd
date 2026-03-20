@@ -15,32 +15,39 @@ const CombatSystemScript = preload("res://scripts/core/combat_system.gd")
 const SkillSystemScript = preload("res://scripts/systems/skill_system.gd")
 const ItemSystemScript = preload("res://scripts/systems/item_system.gd")
 const TurnManagerScript = preload("res://scripts/core/turn_manager.gd")
+const BattleConditionSystemScript = preload("res://scripts/core/battle_condition_system.gd")
 const AIEvaluatorScript = preload("res://scripts/ai/ai_evaluator.gd")
 const AIControllerScript = preload("res://scripts/ai/ai_controller.gd")
 const PlayerUnitScript = preload("res://scripts/entities/player_unit.gd")
 const EnemyUnitScript = preload("res://scripts/entities/enemy_unit.gd")
+const BattleHUDPresenterScript = preload("res://scripts/ui/battle_hud_presenter.gd")
 
 signal unit_killed(context: Dictionary)
 signal non_lethal_hit(context: Dictionary)
 signal control_applied(context: Dictionary)
 signal battle_result(context: Dictionary)
 
-const BOARD_TOP_MARGIN := 36.0
-const BOARD_SIDE_MARGIN := 28.0
-const BOARD_BOTTOM_RESERVED := 204.0
+const BOARD_TOP_MARGIN := 18.0
+const BOARD_SIDE_MARGIN := 16.0
+const BOARD_BOTTOM_RESERVED := 174.0
 
 @export var initial_battle_id := "battle_001"
+@export var debug_click_trace := true
 
 @onready var camera_2d: Camera2D = $Camera2D
+@onready var background_sprite = $BackgroundLayer/BackgroundSprite
 @onready var grid_manager: GridManager = $BoardRoot
 @onready var player_units_root: Node2D = $BoardRoot/UnitLayer/PlayerUnits
 @onready var enemy_units_root: Node2D = $BoardRoot/UnitLayer/EnemyUnits
-@onready var top_info_panel: PanelContainer = $CanvasLayer/BattleTopInfo
-@onready var round_label: Label = $CanvasLayer/BattleTopInfo/Margin/VBox/RoundLabel
-@onready var current_unit_label: Label = $CanvasLayer/BattleTopInfo/Margin/VBox/CurrentUnitLabel
-@onready var phase_label: Label = $CanvasLayer/BattleTopInfo/Margin/VBox/PhaseLabel
-@onready var prompt_label: Label = $CanvasLayer/BattleTopInfo/Margin/VBox/PromptLabel
-@onready var battle_hud: Control = $CanvasLayer/BottomHUD
+@onready var battle_meta_panel: PanelContainer = $CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow/BattleMetaInfo
+@onready var battle_title_label: Label = $CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow/BattleMetaInfo/MetaMargin/MetaVBox/TitleLabel
+@onready var battle_note_label: Label = $CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow/BattleMetaInfo/MetaMargin/MetaVBox/NoteLabel
+@onready var top_info_panel: PanelContainer = $CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow/BattleTopInfo
+@onready var round_label: Label = $CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow/BattleTopInfo/Margin/VBox/RoundLabel
+@onready var current_unit_label: Label = $CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow/BattleTopInfo/Margin/VBox/CurrentUnitLabel
+@onready var phase_label: Label = $CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow/BattleTopInfo/Margin/VBox/PhaseLabel
+@onready var prompt_label: Label = $CanvasLayer/UIRoot/SafeArea/MainVBox/TopRow/BattleTopInfo/Margin/VBox/PromptLabel
+@onready var battle_hud: Control = $CanvasLayer/UIRoot/SafeArea/MainVBox/BottomDock/BottomHUD
 
 var runtime_rules: Dictionary = {}
 var data_manager
@@ -55,8 +62,10 @@ var combat_system
 var skill_system
 var item_system
 var turn_manager
+var battle_condition_system
 var ai_evaluator
 var ai_controller
+var battle_hud_presenter
 
 var battle_config: Dictionary = {}
 var player_units: Array = []
@@ -67,6 +76,10 @@ var selected_unit = null
 var focused_unit = null
 var active_unit = null
 var hovered_unit = null
+var interaction_feedback_text := ""
+var current_move_preview_cells: Array[Vector2i] = []
+var current_qinggong_preview := {"valid": [], "invalid": []}
+var current_target_preview_cells: Array[Vector2i] = []
 
 var battle_over := false
 var input_locked := false
@@ -102,6 +115,10 @@ func start_battle(battle_id: String) -> void:
 	battle_result_id = ""
 	show_enemy_skills = true
 	show_enemy_inventory = true
+	interaction_feedback_text = ""
+	current_move_preview_cells.clear()
+	current_qinggong_preview = {"valid": [], "invalid": []}
+	current_target_preview_cells.clear()
 	_clear_units()
 	_build_runtime_services()
 	battle_config = battle_loader.load_battle_config(battle_id)
@@ -109,8 +126,10 @@ func start_battle(battle_id: String) -> void:
 		battle_over = true
 		update_ui()
 		return
+	battle_condition_system.configure(battle_config)
 	ai_difficulty = String(battle_config.get("ai_difficulty", "simple"))
 	_apply_enemy_info_flags()
+	_apply_battle_meta()
 	movement_system.configure_board(battle_config.get("board", {}), battle_config.get("terrain", []))
 	var board: Dictionary = battle_config.get("board", {})
 	grid_manager.configure_board(int(board.get("columns", 8)), int(board.get("rows", 8)), movement_system.get_terrain_map(), runtime_rules.get("terrain_types", {}))
@@ -121,6 +140,7 @@ func start_battle(battle_id: String) -> void:
 		update_ui()
 		return
 	_spawn_units(formation_result)
+	battle_condition_system.capture_initial_units(all_units)
 	movement_system.register_units(all_units)
 	active_unit = turn_manager.begin_battle(player_units, enemy_units)
 	_after_turn_advanced()
@@ -157,21 +177,30 @@ func _connect_ui() -> void:
 
 func _apply_ui_theme() -> void:
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.10, 0.14, 0.56)
-	style.border_color = Color(0.86, 0.88, 0.92, 0.10)
+	style.bg_color = Color(0.07, 0.06, 0.05, 0.74)
+	style.border_color = Color(0.36, 0.31, 0.27, 0.46)
 	style.border_width_left = 1
 	style.border_width_top = 1
 	style.border_width_right = 1
 	style.border_width_bottom = 1
-	style.corner_radius_top_left = 10
-	style.corner_radius_top_right = 10
-	style.corner_radius_bottom_left = 10
-	style.corner_radius_bottom_right = 10
+	style.corner_radius_top_left = 12
+	style.corner_radius_top_right = 12
+	style.corner_radius_bottom_left = 12
+	style.corner_radius_bottom_right = 12
+	battle_meta_panel.add_theme_stylebox_override("panel", style)
 	top_info_panel.add_theme_stylebox_override("panel", style)
-	for label in [round_label, current_unit_label, phase_label, prompt_label]:
-		label.add_theme_color_override("font_color", Color(0.95, 0.95, 0.94, 1.0))
-		label.add_theme_font_size_override("font_size", 11)
-	prompt_label.add_theme_font_size_override("font_size", 10)
+	_apply_label_theme(battle_title_label, 18, "primary", 2)
+	_apply_label_theme(battle_note_label, 12, "body", 1)
+	for label in [round_label, current_unit_label, phase_label]:
+		_apply_label_theme(label, 13, "primary", 1)
+	_apply_label_theme(prompt_label, 12, "highlight", 1)
+
+
+func _apply_label_theme(label: Label, font_size: int, color_role: String, outline_size: int) -> void:
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", BattleVisuals.get_text_color(color_role))
+	label.add_theme_color_override("font_outline_color", BattleVisuals.get_outline_color())
+	label.add_theme_constant_override("outline_size", outline_size)
 
 func _build_runtime_services() -> void:
 	data_manager = DataManagerScript.new()
@@ -187,8 +216,10 @@ func _build_runtime_services() -> void:
 	skill_system = SkillSystemScript.new(data_manager, movement_system, action_system, resource_system, stance_system, status_system, combat_system)
 	item_system = ItemSystemScript.new(data_manager, action_system, resource_system, status_system)
 	turn_manager = TurnManagerScript.new(action_system, resource_system, status_system)
+	battle_condition_system = BattleConditionSystemScript.new()
 	ai_evaluator = AIEvaluatorScript.new(skill_system, movement_system, stance_system, combat_system)
 	ai_controller = AIControllerScript.new(skill_system, movement_system, action_system, ai_evaluator)
+	battle_hud_presenter = BattleHUDPresenterScript.new(skill_system, item_system, action_system, movement_system)
 
 func _apply_enemy_info_flags() -> void:
 	var by_difficulty: Dictionary = runtime_rules.get("enemy_info_visibility_by_difficulty", {})
@@ -284,7 +315,7 @@ func execute_item_for_unit(unit, item_id: String, target) -> bool:
 	return true
 
 func move_unit_for_ai(unit, target_cell: Vector2i) -> bool:
-	return _execute_normal_move(unit, target_cell)
+	return bool(_execute_normal_move(unit, target_cell).get("success", false))
 
 func skip_move_phase_for_ai(unit) -> bool:
 	if unit == null or not unit.is_alive() or action_system.is_move_phase_done(unit):
@@ -301,57 +332,307 @@ func _unhandled_input(event: InputEvent) -> void:
 		if _has_pending_target_selection():
 			pending_skill_id = ""
 			pending_item_id = ""
+			_clear_interaction_feedback()
+			_debug_click_trace("CLICK_CANCEL", {
+				"phase": _get_phase_id(),
+				"actor": _debug_unit_name(active_unit),
+				"reason": "cancelled"
+			})
 			refresh_highlights()
 			update_ui()
 		return
 	if event.button_index != MOUSE_BUTTON_LEFT:
 		return
-	var clicked_cell: Vector2i = grid_manager.world_to_cell(event.position)
-	if not grid_manager.is_in_bounds(clicked_cell):
-		return
-	var clicked_unit = movement_system.get_unit_at(clicked_cell)
-	if _has_pending_target_selection() and _can_player_act() and _handle_pending_selection(clicked_cell, clicked_unit):
-		return
-	if clicked_unit != null:
-		_set_focused_unit(clicked_unit)
-		refresh_highlights()
-		update_ui()
-		return
-	if battle_over or not _can_player_act() or active_unit == null or focused_unit != active_unit:
-		return
-	if not action_system.is_move_phase_done(active_unit) and _execute_normal_move(active_unit, clicked_cell):
-		_after_player_action()
+	var click_context := _build_battle_left_click_context(event.position)
+	var result := handle_battle_left_click(click_context)
+	_trace_left_click_decision(click_context, result)
 
-func _handle_pending_selection(clicked_cell: Vector2i, clicked_unit) -> bool:
+
+func handle_battle_left_click(click_context: Dictionary) -> Dictionary:
+	var targeting_mode := String(click_context.get("targeting_mode", "none"))
+	if targeting_mode != "none":
+		return _handle_pending_selection_click(click_context)
+	if click_context.get("clicked_unit", null) != null:
+		return _handle_click_on_unit(click_context)
+	if bool(click_context.get("has_valid_cell", false)):
+		return _handle_click_on_board_cell(click_context)
+	return {
+		"handled": false,
+		"decision": "IGNORE",
+		"success": false,
+		"reason": "out_of_bounds",
+		"show_feedback": false
+	}
+
+
+func _build_battle_left_click_context(screen_position: Vector2) -> Dictionary:
+	var world_position := _screen_to_world(screen_position)
+	var clicked_cell: Vector2i = grid_manager.world_to_cell(world_position)
+	var has_valid_cell := grid_manager.is_in_bounds(clicked_cell)
+	var clicked_unit = _get_unit_under_world_position(world_position, true, clicked_cell)
+	return {
+		"screen_pos": screen_position,
+		"world_pos": world_position,
+		"clicked_unit": clicked_unit,
+		"clicked_cell": clicked_cell,
+		"has_valid_cell": has_valid_cell,
+		"phase": _get_phase_id(),
+		"targeting_mode": _get_targeting_mode(),
+		"pending_skill_id": pending_skill_id,
+		"pending_item_id": pending_item_id,
+		"actor": active_unit,
+		"focused_unit": focused_unit,
+		"move_preview": current_move_preview_cells.duplicate(),
+		"qinggong_preview": {
+			"valid": current_qinggong_preview.get("valid", []).duplicate(),
+			"invalid": current_qinggong_preview.get("invalid", []).duplicate()
+		},
+		"target_preview": current_target_preview_cells.duplicate()
+	}
+
+
+func _build_click_result(
+	decision: String,
+	success: bool,
+	reason: String = "",
+	handled: bool = true,
+	show_feedback: bool = false
+) -> Dictionary:
+	return {
+		"handled": handled,
+		"decision": decision,
+		"success": success,
+		"reason": reason,
+		"show_feedback": show_feedback
+	}
+
+
+func _handle_pending_selection_click(click_context: Dictionary) -> Dictionary:
+	var actor = click_context.get("actor", null)
+	var clicked_unit = click_context.get("clicked_unit", null)
+	var clicked_cell: Vector2i = click_context.get("clicked_cell", Vector2i(-1, -1))
+	var has_valid_cell := bool(click_context.get("has_valid_cell", false))
+	var targeting_mode := String(click_context.get("targeting_mode", "none"))
+
+	if battle_over:
+		_set_interaction_feedback("battle_over")
+		update_ui()
+		return _build_click_result("REJECT", false, "battle_over", true, true)
+	if not _can_player_act() or actor == null or not actor.is_alive():
+		_set_interaction_feedback("wrong_phase")
+		update_ui()
+		return _build_click_result("REJECT", false, "wrong_phase", true, true)
+
+	if targeting_mode == "qinggong":
+		if not has_valid_cell:
+			_set_interaction_feedback("out_of_bounds")
+			update_ui()
+			return _build_click_result("MOVE_QINGGONG", false, "out_of_bounds", true, true)
+		var move_validation := _validate_qinggong_click(actor, clicked_cell, click_context)
+		if not bool(move_validation.get("ok", false)):
+			_set_interaction_feedback(String(move_validation.get("reason", "unknown")))
+			update_ui()
+			return _build_click_result("MOVE_QINGGONG", false, String(move_validation.get("reason", "unknown")), true, true)
+		if execute_skill_for_unit(actor, pending_skill_id, clicked_cell):
+			_clear_interaction_feedback()
+			_after_player_action()
+			return _build_click_result("MOVE_QINGGONG", true, "ok")
+		_set_interaction_feedback("invalid_target")
+		update_ui()
+		return _build_click_result("MOVE_QINGGONG", false, "invalid_target", true, true)
+
 	if not pending_skill_id.is_empty():
 		var skill_def: Dictionary = skill_system.get_skill(pending_skill_id)
 		if skill_def.is_empty():
 			pending_skill_id = ""
-			return false
-		var skill_target = clicked_cell if String(skill_def.get("targeting", {}).get("type", "self")) == "cell" else clicked_unit
-		if skill_target != null and execute_skill_for_unit(active_unit, pending_skill_id, skill_target):
+			_set_interaction_feedback("invalid_target")
+			update_ui()
+			return _build_click_result("REJECT", false, "invalid_target", true, true)
+		var target_type := String(skill_def.get("targeting", {}).get("type", "self"))
+		var skill_target = null
+		match target_type:
+			"self":
+				skill_target = actor
+			"cell":
+				if not has_valid_cell:
+					_set_interaction_feedback("out_of_bounds")
+					update_ui()
+					return _build_click_result("CONFIRM_TARGET", false, "out_of_bounds", true, true)
+				if not _cell_in_cells(current_target_preview_cells, clicked_cell):
+					_set_interaction_feedback("not_in_target_range")
+					update_ui()
+					return _build_click_result("CONFIRM_TARGET", false, "not_in_target_range", true, true)
+				skill_target = clicked_cell
+			"unit":
+				if clicked_unit == null:
+					_set_interaction_feedback("invalid_target")
+					update_ui()
+					return _build_click_result("CONFIRM_TARGET", false, "invalid_target", true, true)
+				if not _cell_in_cells(current_target_preview_cells, clicked_unit.grid_position):
+					_set_interaction_feedback("not_in_target_range")
+					update_ui()
+					return _build_click_result("CONFIRM_TARGET", false, "not_in_target_range", true, true)
+				skill_target = clicked_unit
+			_:
+				skill_target = null
+		if skill_target == null:
+			_set_interaction_feedback("invalid_target")
+			update_ui()
+			return _build_click_result("CONFIRM_TARGET", false, "invalid_target", true, true)
+		if execute_skill_for_unit(actor, pending_skill_id, skill_target):
+			_clear_interaction_feedback()
 			_after_player_action()
-			return true
+			return _build_click_result("CONFIRM_TARGET", true, "ok")
+		_set_interaction_feedback("invalid_target")
+		update_ui()
+		return _build_click_result("CONFIRM_TARGET", false, "invalid_target", true, true)
+
 	if not pending_item_id.is_empty():
 		var item_def: Dictionary = item_system.get_item(pending_item_id)
 		if item_def.is_empty():
 			pending_item_id = ""
-			return false
-		var item_target = active_unit if String(item_def.get("targeting", {}).get("type", "self")) == "self" else clicked_unit
-		if item_target != null and execute_item_for_unit(active_unit, pending_item_id, item_target):
+			_set_interaction_feedback("invalid_target")
+			update_ui()
+			return _build_click_result("REJECT", false, "invalid_target", true, true)
+		var target_type := String(item_def.get("targeting", {}).get("type", "self"))
+		var item_target = actor if target_type == "self" else clicked_unit
+		if item_target == null:
+			_set_interaction_feedback("invalid_target")
+			update_ui()
+			return _build_click_result("CONFIRM_TARGET", false, "invalid_target", true, true)
+		if target_type == "unit" and not _cell_in_cells(current_target_preview_cells, item_target.grid_position):
+			_set_interaction_feedback("not_in_target_range")
+			update_ui()
+			return _build_click_result("CONFIRM_TARGET", false, "not_in_target_range", true, true)
+		if execute_item_for_unit(actor, pending_item_id, item_target):
+			_clear_interaction_feedback()
 			_after_player_action()
-			return true
-	return false
+			return _build_click_result("CONFIRM_TARGET", true, "ok")
+		_set_interaction_feedback("invalid_target")
+		update_ui()
+		return _build_click_result("CONFIRM_TARGET", false, "invalid_target", true, true)
 
-func _execute_normal_move(unit, target_cell: Vector2i) -> bool:
-	if unit == null or not unit.is_alive() or target_cell == unit.grid_position:
-		return false
-	if not action_system.can_move_normally(unit) or movement_system.is_cell_occupied(target_cell, unit):
-		return false
+	_set_interaction_feedback("no_pending_target")
+	update_ui()
+	return _build_click_result("REJECT", false, "no_pending_target", true, true)
+
+
+func _handle_click_on_unit(click_context: Dictionary) -> Dictionary:
+	var clicked_unit = click_context.get("clicked_unit", null)
+	if clicked_unit == null:
+		return _build_click_result("IGNORE", false, "", false, false)
+
+	var decision := "FOCUS_ENEMY"
+	if clicked_unit == active_unit:
+		decision = "FOCUS_ACTIVE"
+	elif String(clicked_unit.team) == "player":
+		decision = "FOCUS_ALLY"
+
+	_set_focused_unit(clicked_unit)
+	_clear_interaction_feedback()
+	refresh_highlights()
+	update_ui()
+	return _build_click_result(decision, true, "ok")
+
+
+func _handle_click_on_board_cell(click_context: Dictionary) -> Dictionary:
+	var phase := String(click_context.get("phase", "loading"))
+	var clicked_cell: Vector2i = click_context.get("clicked_cell", Vector2i(-1, -1))
+	var actor = click_context.get("actor", null)
+
+	match phase:
+		"waiting_move":
+			var validation := _validate_ground_move_click(actor, clicked_cell, click_context)
+			if not bool(validation.get("ok", false)):
+				_set_interaction_feedback(String(validation.get("reason", "unknown")))
+				update_ui()
+				return _build_click_result("MOVE_NORMAL", false, String(validation.get("reason", "unknown")), true, true)
+			var move_result := _execute_normal_move(actor, clicked_cell)
+			if bool(move_result.get("success", false)):
+				_clear_interaction_feedback()
+				return _build_click_result("MOVE_NORMAL", true, "ok")
+			_set_interaction_feedback(String(move_result.get("reason", "unknown")))
+			update_ui()
+			return _build_click_result("MOVE_NORMAL", false, String(move_result.get("reason", "unknown")), true, true)
+		"waiting_action", "waiting_end":
+			if active_unit != null:
+				_set_focused_unit(active_unit)
+				_clear_interaction_feedback()
+				refresh_highlights()
+				update_ui()
+				return _build_click_result("RETURN_TO_ACTIVE", true, "ok")
+			return _build_click_result("IGNORE", false, "no_active_unit", true, false)
+		_:
+			_set_interaction_feedback("wrong_phase")
+			update_ui()
+			return _build_click_result("REJECT", false, "wrong_phase", true, true)
+
+
+func _validate_ground_move_click(unit, target_cell: Vector2i, click_context: Dictionary = {}) -> Dictionary:
+	if battle_over:
+		return {"ok": false, "reason": "battle_over", "in_preview": false}
+	if unit == null or not unit.is_alive():
+		return {"ok": false, "reason": "no_active_unit", "in_preview": false}
+	if String(click_context.get("phase", _get_phase_id())) != "waiting_move":
+		return {"ok": false, "reason": "wrong_phase", "in_preview": false}
+	if not _can_player_act():
+		return {"ok": false, "reason": "wrong_phase", "in_preview": false}
+	if not grid_manager.is_in_bounds(target_cell):
+		return {"ok": false, "reason": "out_of_bounds", "in_preview": false}
+	if target_cell == unit.grid_position:
+		return {"ok": false, "reason": "same_cell", "in_preview": false}
+	if not action_system.can_move_normally(unit):
+		return {"ok": false, "reason": "no_move_budget", "in_preview": false}
+	if movement_system.is_cell_occupied(target_cell, unit):
+		return {"ok": false, "reason": "occupied", "in_preview": false}
+	var in_preview := _cell_in_cells(current_move_preview_cells, target_cell)
+	if not in_preview:
+		return {"ok": false, "reason": "not_in_move_range", "in_preview": false}
+	var validation: Dictionary = movement_system.validate_move_destination(unit, target_cell, action_system.get_remaining_move(unit), "ground")
+	validation["in_preview"] = in_preview
+	return validation
+
+
+func _validate_qinggong_click(unit, target_cell: Vector2i, click_context: Dictionary = {}) -> Dictionary:
+	if battle_over:
+		return {"ok": false, "reason": "battle_over", "in_preview": false}
+	if unit == null or not unit.is_alive():
+		return {"ok": false, "reason": "no_active_unit", "in_preview": false}
+	if String(click_context.get("targeting_mode", _get_targeting_mode())) != "qinggong":
+		return {"ok": false, "reason": "no_pending_qinggong", "in_preview": false}
+	if not _can_player_act():
+		return {"ok": false, "reason": "wrong_phase", "in_preview": false}
+	if not grid_manager.is_in_bounds(target_cell):
+		return {"ok": false, "reason": "out_of_bounds", "in_preview": false}
+	if movement_system.is_cell_occupied(target_cell, unit):
+		return {"ok": false, "reason": "occupied", "in_preview": false}
+	var preview_valid: Array = current_qinggong_preview.get("valid", [])
+	var preview_invalid: Array = current_qinggong_preview.get("invalid", [])
+	var in_preview := _cell_in_cells(preview_valid, target_cell)
+	if not in_preview:
+		return {
+			"ok": false,
+			"reason": "enemy_back_landing" if _cell_in_cells(preview_invalid, target_cell) else "not_in_qinggong_range",
+			"in_preview": false
+		}
+	var skill_def: Dictionary = skill_system.get_skill(pending_skill_id)
+	var range_limit: int = skill_system.get_skill_range(unit, skill_def)
+	var validation: Dictionary = movement_system.validate_move_destination(unit, target_cell, range_limit, "qinggong")
+	validation["in_preview"] = in_preview
+	return validation
+
+
+func _execute_normal_move(unit, target_cell: Vector2i) -> Dictionary:
+	if unit == null or not unit.is_alive():
+		return {"success": false, "reason": "no_active_unit"}
+	if target_cell == unit.grid_position:
+		return {"success": false, "reason": "same_cell"}
+	if not action_system.can_move_normally(unit):
+		return {"success": false, "reason": "no_move_budget"}
 	var start_cell: Vector2i = unit.grid_position
 	var move_result: Dictionary = movement_system.apply_move(unit, target_cell, "ground", action_system.get_remaining_move(unit))
 	if not bool(move_result.get("success", false)):
-		return false
+		return {"success": false, "reason": String(move_result.get("reason", "unreachable"))}
 	action_system.record_normal_move(unit, int(move_result.get("distance", 0)))
 	pending_skill_id = ""
 	pending_item_id = ""
@@ -359,13 +640,23 @@ func _execute_normal_move(unit, target_cell: Vector2i) -> bool:
 	_sync_unit_visual(unit)
 	if unit == active_unit:
 		_set_focused_unit(unit)
+	if _check_battle_end():
+		refresh_highlights()
+		update_ui()
+		return {"success": true, "reason": "ok"}
 	refresh_highlights()
 	update_ui()
-	return true
+	return {
+		"success": true,
+		"reason": "ok",
+		"distance": int(move_result.get("distance", 0)),
+		"target": target_cell
+	}
 
 func _after_player_action() -> void:
 	if not battle_over and active_unit != null and active_unit.is_alive():
 		_set_focused_unit(active_unit)
+	_clear_interaction_feedback()
 	refresh_highlights()
 	update_ui()
 
@@ -374,6 +665,7 @@ func _end_active_unit_turn() -> void:
 		return
 	pending_skill_id = ""
 	pending_item_id = ""
+	_clear_interaction_feedback()
 	turn_manager.end_current_turn()
 	active_unit = turn_manager.advance_to_next_unit()
 	_after_turn_advanced()
@@ -390,6 +682,7 @@ func _after_turn_advanced() -> void:
 		return
 	pending_skill_id = ""
 	pending_item_id = ""
+	_clear_interaction_feedback()
 	_set_focused_unit(active_unit)
 	if active_unit.team == "player":
 		input_locked = false
@@ -450,19 +743,13 @@ func _cleanup_dead_units() -> void:
 func _check_battle_end() -> bool:
 	if battle_result_id != "":
 		return true
-	if get_player_units().is_empty():
+	var result := String(battle_condition_system.resolve_battle_result(_build_battle_condition_state()))
+	if not result.is_empty():
 		battle_over = true
 		input_locked = true
-		battle_result_id = "defeat"
+		battle_result_id = result
 		grid_manager.clear_highlights()
-		emit_signal("battle_result", {"result": "defeat", "battle_id": current_battle_id})
-		return true
-	if get_enemy_units().is_empty():
-		battle_over = true
-		input_locked = true
-		battle_result_id = "victory"
-		grid_manager.clear_highlights()
-		emit_signal("battle_result", {"result": "victory", "battle_id": current_battle_id})
+		emit_signal("battle_result", {"result": result, "battle_id": current_battle_id})
 		return true
 	return false
 
@@ -521,10 +808,8 @@ func _get_qinggong_preview(unit) -> Dictionary:
 func _update_hovered_unit(screen_position: Vector2) -> void:
 	if grid_manager == null or movement_system == null:
 		return
-	var hovered_cell := grid_manager.world_to_cell(screen_position)
-	var next_unit = null
-	if grid_manager.is_in_bounds(hovered_cell):
-		next_unit = movement_system.get_unit_at(hovered_cell)
+	var world_position := _screen_to_world(screen_position)
+	var next_unit = _get_unit_under_world_position(world_position, false)
 	_set_hovered_unit(next_unit)
 
 
@@ -549,34 +834,163 @@ func _set_focused_unit(unit = null) -> void:
 	else:
 		grid_manager.set_selected_cell(Vector2i(-1, -1))
 
+
+func _screen_to_world(screen_position: Vector2) -> Vector2:
+	return get_viewport().get_canvas_transform().affine_inverse() * screen_position
+
+
+func _get_unit_under_world_position(world_position: Vector2, use_click_hit: bool = false, resolved_cell: Vector2i = Vector2i(-1, -1)):
+	var hit_unit = null
+	var best_score := -INF
+	for unit in all_units:
+		if unit == null or not unit.is_alive():
+			continue
+		var did_hit := false
+		if use_click_hit and unit.has_method("hit_test_click_world_point"):
+			did_hit = unit.hit_test_click_world_point(world_position)
+		elif not use_click_hit and unit.has_method("hit_test_hover_world_point"):
+			did_hit = unit.hit_test_hover_world_point(world_position)
+		elif unit.has_method("hit_test_world_point"):
+			did_hit = unit.hit_test_world_point(world_position)
+		if did_hit:
+			var score: float = float(unit.z_index) * 10000.0 - unit.global_position.distance_squared_to(world_position)
+			if score > best_score:
+				best_score = score
+				hit_unit = unit
+	if hit_unit != null:
+		return hit_unit
+	var hovered_cell := resolved_cell if resolved_cell != Vector2i(-1, -1) else grid_manager.world_to_cell(world_position)
+	if grid_manager.is_in_bounds(hovered_cell):
+		return movement_system.get_unit_at(hovered_cell)
+	return null
+
+
+func _cell_in_highlight(kind: String, cell: Vector2i) -> bool:
+	return _cell_in_cells(grid_manager.highlights.get(kind, []), cell)
+
+
+func _cell_in_cells(cells: Array, cell: Vector2i) -> bool:
+	for candidate in cells:
+		if candidate == cell:
+			return true
+	return false
+
+
+func _debug_click_trace(kind: String, payload: Dictionary) -> void:
+	if not debug_click_trace:
+		return
+	var preferred_keys := [
+		"phase", "targeting_mode", "actor", "focused", "mouse", "world", "cell", "actor_cell",
+		"clicked_unit", "clicked_team", "hovered_unit", "focused_before", "focused_after",
+		"in_move_range", "in_qinggong_range", "in_target_range", "can_move", "decision", "success", "reason"
+	]
+	var parts: Array[String] = ["[%s]" % kind]
+	for key in preferred_keys:
+		if payload.has(key):
+			var value: Variant = payload[key]
+			if key == "reason":
+				value = BattleTexts.click_failure_reason(String(value))
+			parts.append("%s=%s" % [key, String(value)])
+	print(" ".join(parts))
+
+
+func _debug_unit_name(unit) -> String:
+	if unit == null:
+		return "none"
+	return String(unit.unit_id if not String(unit.unit_id).is_empty() else unit.display_name)
+
+
+func _debug_cell(cell: Vector2i) -> String:
+	return "(%d,%d)" % [cell.x, cell.y]
+
+
+func _debug_vec2(value: Vector2) -> String:
+	return "(%.1f,%.1f)" % [value.x, value.y]
+
+
+func _trace_left_click_decision(click_context: Dictionary, result: Dictionary) -> void:
+	if not bool(result.get("handled", false)) and not debug_click_trace:
+		return
+	_debug_click_trace("LEFT_CLICK", {
+		"phase": String(click_context.get("phase", "loading")),
+		"targeting_mode": String(click_context.get("targeting_mode", "none")),
+		"actor": _debug_unit_name(click_context.get("actor", null)),
+		"focused": _debug_unit_name(click_context.get("focused_unit", null)),
+		"mouse": _debug_vec2(click_context.get("screen_pos", Vector2.ZERO)),
+		"world": _debug_vec2(click_context.get("world_pos", Vector2.ZERO)),
+		"cell": _debug_cell(click_context.get("clicked_cell", Vector2i(-1, -1))),
+		"actor_cell": _debug_cell(click_context.get("actor", null).grid_position if click_context.get("actor", null) != null else Vector2i(-1, -1)),
+		"clicked_unit": _debug_unit_name(click_context.get("clicked_unit", null)),
+		"clicked_team": String(click_context.get("clicked_unit", null).team) if click_context.get("clicked_unit", null) != null else "",
+		"decision": String(result.get("decision", "IGNORE")),
+		"success": bool(result.get("success", false)),
+		"reason": String(result.get("reason", ""))
+	})
+
+
+func _get_targeting_mode() -> String:
+	if not pending_skill_id.is_empty():
+		var skill_def: Dictionary = skill_system.get_skill(pending_skill_id)
+		if String(skill_def.get("action_type", "")) == "move":
+			return "qinggong"
+		return "skill"
+	if not pending_item_id.is_empty():
+		return "item"
+	return "none"
+
+
+func _set_interaction_feedback(reason_id: String, custom_text: String = "") -> void:
+	interaction_feedback_text = custom_text if not custom_text.is_empty() else BattleTexts.click_failure_reason(reason_id)
+
+
+func _clear_interaction_feedback() -> void:
+	interaction_feedback_text = ""
+
 func refresh_highlights() -> void:
+	current_move_preview_cells.clear()
+	current_qinggong_preview = {"valid": [], "invalid": []}
+	current_target_preview_cells.clear()
 	if battle_over or active_unit == null or active_unit.team != "player":
 		grid_manager.clear_highlights()
 		return
 	var next_highlights := {"move": [], "qinggong": [], "attack": [], "invalid": []}
-	if focused_unit != active_unit:
-		grid_manager.set_highlights(next_highlights)
-		return
+	next_highlights["target"] = []
 	if not pending_item_id.is_empty():
 		for target in item_system.get_valid_targets(active_unit, item_system.get_item(pending_item_id), all_units):
 			if target != null and target is Node:
+				current_target_preview_cells.append(target.grid_position)
 				next_highlights["attack"].append(target.grid_position)
+			elif target is Vector2i:
+				current_target_preview_cells.append(target)
+				next_highlights["attack"].append(target)
+		if focused_unit != null and focused_unit != active_unit and _cell_in_cells(current_target_preview_cells, focused_unit.grid_position):
+			next_highlights["target"].append(focused_unit.grid_position)
 		grid_manager.set_highlights(next_highlights)
 		return
 	if not pending_skill_id.is_empty():
 		var pending_skill: Dictionary = skill_system.get_skill(pending_skill_id)
 		if String(pending_skill.get("action_type", "")) == "move":
-			var preview := _get_qinggong_preview(active_unit)
-			next_highlights["qinggong"] = preview.get("valid", [])
-			next_highlights["invalid"] = preview.get("invalid", [])
+			current_qinggong_preview = _get_qinggong_preview(active_unit)
+			next_highlights["qinggong"] = current_qinggong_preview.get("valid", []).duplicate()
+			next_highlights["invalid"] = current_qinggong_preview.get("invalid", []).duplicate()
 		else:
 			for target in skill_system.get_valid_targets(active_unit, pending_skill, all_units):
 				if target != null and target is Node:
+					current_target_preview_cells.append(target.grid_position)
 					next_highlights["attack"].append(target.grid_position)
+				elif target is Vector2i:
+					current_target_preview_cells.append(target)
+					next_highlights["attack"].append(target)
+			if focused_unit != null and focused_unit != active_unit and _cell_in_cells(current_target_preview_cells, focused_unit.grid_position):
+				next_highlights["target"].append(focused_unit.grid_position)
 	elif not action_system.is_move_phase_done(active_unit):
-		next_highlights["move"] = movement_system.get_reachable_cells(active_unit, action_system.get_remaining_move(active_unit), "ground")
+		current_move_preview_cells = movement_system.get_reachable_cells(active_unit, action_system.get_remaining_move(active_unit), "ground")
+		next_highlights["move"] = current_move_preview_cells.duplicate()
 	elif action_system.can_use_action(active_unit):
-		next_highlights["attack"] = _get_attack_preview_cells(active_unit)
+		current_target_preview_cells = _get_attack_preview_cells(active_unit)
+		next_highlights["attack"] = current_target_preview_cells.duplicate()
+	if focused_unit != null and focused_unit != active_unit and focused_unit.is_alive():
+		next_highlights["target"].append(focused_unit.grid_position)
 	grid_manager.set_highlights(next_highlights)
 
 func update_ui() -> void:
@@ -586,174 +1000,43 @@ func update_ui() -> void:
 	current_unit_label.text = BattleTexts.format_current_unit(active_unit.display_name) if active_unit != null else BattleTexts.format_current_unit("无")
 	phase_label.text = BattleTexts.format_phase(phase_id)
 	prompt_label.text = _get_prompt_text(phase_id)
-	battle_hud.update_view(_build_hud_view_model(focus_unit, phase_id))
-
-func _build_hud_view_model(unit, phase_id: String) -> Dictionary:
-	var focus_mode := _get_focus_mode(unit)
-	var view := {
-		"unit": unit,
-		"focused_title": "未选择角色",
-		"phase_text": BattleTexts.format_phase(phase_id),
-		"active_unit_text": "当前行动：%s" % (active_unit.display_name if active_unit != null else "无"),
-		"view_mode_text": "查看模式：%s" % BattleTexts.focus_state_label("none"),
-		"status_hint_text": "请选择战场中的单位查看信息",
-		"hp_text": "生命：-",
-		"qi_text": "真气：无",
-		"show_qi": false,
-		"portrait_texture": null,
-		"facing_text": BattleTexts.format_facing("none"),
-		"facing_id": "none",
-		"facing_enabled": false,
-		"status_tags": [],
-		"system_actions": _build_system_action_entries(),
-		"skill_entries": [],
-		"item_entries": [],
-		"skills_state_text": "",
-		"items_state_text": ""
-	}
-	if unit == null:
-		return view
-	view["focused_title"] = unit.display_name
-	view["hp_text"] = BattleTexts.format_hp(unit.hp, unit.max_hp)
-	view["qi_text"] = BattleTexts.format_qi(unit.uses_qi, unit.qi, unit.max_qi)
-	view["show_qi"] = unit.uses_qi
-	view["facing_text"] = BattleTexts.format_facing(unit.get_facing_id())
-	view["portrait_texture"] = unit.get_portrait_texture()
-	view["facing_id"] = unit.get_facing_id()
-	view["facing_enabled"] = focus_mode == "controllable"
-	view["status_tags"] = _build_status_tags(unit)
-	view["view_mode_text"] = _build_view_mode_text(unit, focus_mode)
-	view["status_hint_text"] = _build_status_hint_text(unit, phase_id, focus_mode)
-	view["skill_entries"] = _build_skill_entries(unit, focus_mode)
-	view["item_entries"] = _build_item_entries(unit, focus_mode)
-	view["skills_state_text"] = _get_skills_state_text(unit, focus_mode)
-	view["items_state_text"] = _get_items_state_text(unit, focus_mode)
-	return view
-
-func _build_status_tags(unit) -> Array[Dictionary]:
-	var entries: Array[Dictionary] = []
-	var stance_id := String(unit.current_stance)
-	entries.append({
-		"id": "stance:%s" % stance_id,
-		"text": BattleVisuals.get_stance_tag_text(stance_id),
-		"kind": "stance",
-		"description": BattleVisuals.get_stance_description(stance_id),
-		"icon_texture": BattleVisuals.get_stance_icon(stance_id)
+	var view_model: Dictionary = battle_hud_presenter.build_view_model({
+		"battle_config": battle_config,
+		"phase_id": phase_id,
+		"prompt_text": prompt_label.text,
+		"active_unit": active_unit,
+		"focused_unit": focus_unit,
+		"selected_cell": grid_manager.selected_cell,
+		"pending_skill_id": pending_skill_id,
+		"pending_item_id": pending_item_id,
+		"show_enemy_skills": show_enemy_skills,
+		"show_enemy_inventory": show_enemy_inventory,
+		"battle_over": battle_over,
+		"battle_result_id": battle_result_id,
+		"all_units": all_units,
+		"can_player_act": _can_player_act(),
+		"interaction_feedback_text": interaction_feedback_text
 	})
-	for status_id in unit.statuses.keys():
-		var payload: Dictionary = unit.statuses[status_id]
-		var stacks := int(payload.get("stacks", 0))
-		entries.append({
-			"id": String(status_id),
-			"text": BattleVisuals.get_status_tag_text(String(status_id), stacks),
-			"kind": "buff" if String(status_id) == "yinren" else "debuff",
-			"description": BattleVisuals.get_status_description(String(status_id), stacks)
-		})
-	return entries
+	battle_hud.update_view(view_model)
+
+func _apply_battle_meta() -> void:
+	var title := String(battle_config.get("title", current_battle_id))
+	var ui_note := String(battle_config.get("ui_note", ""))
+	var background_path := String(battle_config.get("background_path", ""))
+	battle_title_label.text = title
+	battle_note_label.text = ui_note
+	battle_note_label.visible = not ui_note.is_empty()
+	background_sprite.set_background_texture_path(background_path, BattleVisuals.get_default_background_path())
 
 
-func _build_view_mode_text(unit, focus_mode: String) -> String:
-	match focus_mode:
-		"controllable":
-			return "查看模式：当前行动单位"
-		"locked_ally":
-			return "查看模式：同伴信息"
-		"readonly_enemy":
-			return "查看模式：敌方情报"
-		_:
-			return "查看模式：%s" % BattleTexts.focus_state_label(focus_mode)
-
-
-func _build_status_hint_text(unit, phase_id: String, focus_mode: String) -> String:
-	if unit != null and active_unit != null and unit != active_unit:
-		return "正在查看：%s / 当前行动：%s" % [unit.display_name, active_unit.display_name]
-	match focus_mode:
-		"controllable":
-			if _has_pending_target_selection():
-				return "左键确认目标，右键取消选择"
-			match phase_id:
-				"waiting_move":
-					return "先移动，再选择本回合行动"
-				"waiting_action":
-					return "攻击、技能、道具共享一次行动"
-				"waiting_end":
-					return "当前角色已行动，可结束回合"
-			return "当前角色可以操作"
-		"locked_ally":
-			return "当前不可操作，仅查看信息"
-		"readonly_enemy":
-			return "敌方单位不可控制，只能查看情报"
-		_:
-			return "请选择需要查看的单位"
-
-func _build_system_action_entries() -> Dictionary:
-	var entries := {"move": {"text": BattleTexts.button_label("move"), "disabled": true}, "qinggong": {"text": "轻功", "disabled": true}, "skip_move": {"text": BattleTexts.button_label("skip_move"), "disabled": true}, "end_turn": {"text": BattleTexts.button_label("end_turn"), "disabled": true}}
-	if active_unit == null:
-		return entries
-	var controllable: bool = _can_player_act() and focused_unit == active_unit
-	var move_skill_id := _get_move_skill_id(active_unit)
-	var qinggong_skill: Dictionary = skill_system.get_skill(move_skill_id)
-	if controllable and not action_system.is_move_phase_done(active_unit) and pending_skill_id.is_empty() and pending_item_id.is_empty():
-		entries["move"]["text"] += BattleTexts.button_label("selected_suffix")
-	entries["move"]["disabled"] = not controllable or action_system.is_move_phase_done(active_unit) or not _has_normal_move_tiles(active_unit)
-	if not qinggong_skill.is_empty():
-		entries["qinggong"]["text"] = BattleTexts.skill_name(qinggong_skill)
-		entries["qinggong"]["icon_path"] = qinggong_skill.get("icon_path", "")
-		if pending_skill_id == move_skill_id:
-			entries["qinggong"]["text"] += BattleTexts.button_label("selected_suffix")
-	entries["qinggong"]["disabled"] = not controllable or move_skill_id.is_empty() or not skill_system.has_valid_target(active_unit, qinggong_skill, all_units)
-	entries["skip_move"]["disabled"] = not controllable or action_system.is_move_phase_done(active_unit) or _has_pending_target_selection()
-	entries["end_turn"]["disabled"] = not controllable or _has_pending_target_selection() or battle_over
-	return entries
-
-func _build_skill_entries(unit, focus_mode: String) -> Array[Dictionary]:
-	var entries: Array[Dictionary] = []
-	if unit.team == "enemy" and not show_enemy_skills:
-		return [{"id": "hidden_enemy_skills", "text": BattleTexts.hidden_skills_text(), "disabled": true, "kind": "hidden"}]
-	var controllable: bool = focus_mode == "controllable"
-	for skill_id in unit.skills:
-		var skill_def: Dictionary = skill_system.get_skill(skill_id)
-		if skill_def.is_empty() or String(skill_def.get("action_type", "")) == "move":
-			continue
-		var text := BattleTexts.skill_name(skill_def)
-		if pending_skill_id == skill_id:
-			text += BattleTexts.button_label("selected_suffix")
-		entries.append({"id": skill_id, "text": text, "tooltip": BattleTexts.skill_name(skill_def), "disabled": not controllable or _has_pending_target_selection() or not action_system.can_use_action(unit) or not skill_system.has_valid_target(unit, skill_def, all_units), "kind": String(skill_def.get("ui_group", "guard")), "icon_path": String(skill_def.get("icon_path", ""))})
-	if entries.is_empty():
-		entries.append({"id": "no_skill", "text": "暂无技能", "disabled": true, "kind": "hidden"})
-	return entries
-
-func _build_item_entries(unit, focus_mode: String) -> Array[Dictionary]:
-	var entries: Array[Dictionary] = []
-	if unit.team == "enemy" and not show_enemy_inventory:
-		return [{"id": "hidden_enemy_inventory", "text": BattleTexts.hidden_inventory_text(), "disabled": true, "kind": "hidden"}]
-	var controllable: bool = focus_mode == "controllable"
-	for entry in unit.get_inventory_entries():
-		var item_id := String(entry.get("item_id", ""))
-		var item_def: Dictionary = item_system.get_item(item_id)
-		if item_def.is_empty():
-			continue
-		var text := "%s x%d" % [BattleTexts.item_name(item_def), int(entry.get("quantity", 0))]
-		if pending_item_id == item_id:
-			text += BattleTexts.button_label("selected_suffix")
-		entries.append({"id": item_id, "text": text, "tooltip": String(item_def.get("description", "")), "disabled": not controllable or _has_pending_target_selection() or not action_system.can_use_action(unit) or not item_system.has_valid_target(unit, item_def, all_units), "kind": "item", "icon_path": String(item_def.get("icon_path", ""))})
-	if entries.is_empty():
-		entries.append({"id": "no_item", "text": BattleTexts.no_items_text(), "disabled": true, "kind": "hidden"})
-	return entries
-
-func _get_skills_state_text(unit, focus_mode: String) -> String:
-	if unit.team == "enemy":
-		return BattleTexts.hidden_skills_text() if not show_enemy_skills else "敌方技能只可查看"
-	if focus_mode == "locked_ally":
-		return "当前不可操作"
-	return "武学列表" if pending_skill_id.is_empty() else "正在选择技能目标"
-
-func _get_items_state_text(unit, focus_mode: String) -> String:
-	if unit.team == "enemy":
-		return BattleTexts.hidden_inventory_text() if not show_enemy_inventory else "敌方背包只可查看"
-	if focus_mode == "locked_ally":
-		return "当前不可操作"
-	return "背包物品" if pending_item_id.is_empty() else "正在选择道具目标"
+func _build_battle_condition_state() -> Dictionary:
+	return {
+		"all_units": all_units,
+		"player_units": player_units,
+		"enemy_units": enemy_units,
+		"active_unit": active_unit,
+		"round_index": turn_manager.get_round_index() if turn_manager != null else 1
+	}
 
 func _get_phase_id() -> String:
 	if battle_over:
@@ -805,6 +1088,7 @@ func _on_move_pressed() -> void:
 		return
 	pending_skill_id = ""
 	pending_item_id = ""
+	_clear_interaction_feedback()
 	refresh_highlights()
 	update_ui()
 
@@ -817,6 +1101,7 @@ func _on_qinggong_pressed() -> void:
 		return
 	pending_item_id = ""
 	pending_skill_id = move_skill_id
+	_clear_interaction_feedback()
 	refresh_highlights()
 	update_ui()
 
@@ -825,6 +1110,7 @@ func _on_skip_move_pressed() -> void:
 		return
 	pending_skill_id = ""
 	pending_item_id = ""
+	_clear_interaction_feedback()
 	action_system.advance_to_action_phase(active_unit)
 	refresh_highlights()
 	update_ui()
@@ -840,10 +1126,12 @@ func _on_skill_requested(skill_id: String) -> void:
 		return
 	if String(skill_def.get("targeting", {}).get("type", "self")) == "self":
 		if execute_skill_for_unit(active_unit, skill_id, active_unit):
+			_clear_interaction_feedback()
 			_after_player_action()
 		return
 	pending_item_id = ""
 	pending_skill_id = skill_id
+	_clear_interaction_feedback()
 	refresh_highlights()
 	update_ui()
 
@@ -855,10 +1143,12 @@ func _on_item_requested(item_id: String) -> void:
 		return
 	if String(item_def.get("targeting", {}).get("type", "self")) == "self":
 		if execute_item_for_unit(active_unit, item_id, active_unit):
+			_clear_interaction_feedback()
 			_after_player_action()
 		return
 	pending_skill_id = ""
 	pending_item_id = item_id
+	_clear_interaction_feedback()
 	refresh_highlights()
 	update_ui()
 
@@ -868,6 +1158,7 @@ func _on_facing_requested(facing_id: String) -> void:
 	var facing_vector := _facing_id_to_vector(facing_id)
 	if facing_vector != Vector2i.ZERO:
 		active_unit.set_facing(facing_vector)
+		_clear_interaction_feedback()
 		grid_manager.refresh_board_layers()
 		update_ui()
 

@@ -1,6 +1,9 @@
 {
 	"id": "battle_002",
 	"name": "Bridge Stand",
+	"title": "桥口死守",
+	"background_path": "res://assets/battle/background/battle_ground.png",
+	"ui_note": "敌方更凶，先守住桥口。",
 	"board": {
 		"columns": 8,
 		"rows": 8
@@ -50,12 +53,12 @@
 	"ai_difficulty": "hard",
 	"victory_conditions": [
 		{
-			"type": "defeat_all_enemies"
+			"type": "all_enemies_defeated"
 		}
 	],
 	"defeat_conditions": [
 		{
-			"type": "all_players_down"
+			"type": "all_allies_defeated"
 		}
 	]
 }

@@ -126,6 +126,37 @@ func set_hovered(value: bool) -> void:
 	queue_redraw()
 
 
+func hit_test_world_point(world_position: Vector2) -> bool:
+	return hit_test_hover_world_point(world_position)
+
+
+func hit_test_hover_world_point(world_position: Vector2) -> bool:
+	if not is_alive():
+		return false
+	var local_position := to_local(world_position)
+	var hit_width := maxf(board_cell_size.x * 0.86, 32.0)
+	var hit_height := _get_visual_height() + board_cell_size.y * 0.34
+	var hit_rect := Rect2(
+		Vector2(-hit_width * 0.5, -hit_height),
+		Vector2(hit_width, hit_height + board_cell_size.y * 0.32)
+	)
+	return hit_rect.has_point(local_position)
+
+
+func hit_test_click_world_point(world_position: Vector2) -> bool:
+	if not is_alive():
+		return false
+	var local_position := to_local(world_position)
+	var hit_width := clampf(board_cell_size.x * 0.62, 20.0, 34.0)
+	var hit_height := clampf(board_cell_size.y * 0.56, 18.0, 30.0)
+	var bottom_offset := board_cell_size.y * 0.12
+	var hit_rect := Rect2(
+		Vector2(-hit_width * 0.5, -hit_height - bottom_offset),
+		Vector2(hit_width, hit_height + bottom_offset)
+	)
+	return hit_rect.has_point(local_position)
+
+
 func set_board_visual_metrics(next_cell_size: Vector2) -> void:
 	if next_cell_size.x <= 0.0 or next_cell_size.y <= 0.0:
 		return
@@ -296,11 +327,19 @@ func _draw_selection_state(show_name: bool) -> void:
 	if selected or active_turn:
 		_draw_polyline_closed(_make_ellipse(Vector2.ZERO, ring_radius_x, ring_radius_y), ring_color, ring_width)
 	if active_turn:
-		_draw_polyline_closed(
-			_make_ellipse(Vector2.ZERO, ring_radius_x + 5.0, ring_radius_y + 2.0),
-			Color(0.54, 0.92, 0.82, 0.20),
-			1.0
-		)
+		var active_ring_texture := BattleVisuals.get_highlight_texture("active_ring")
+		if active_ring_texture != null:
+			var ring_rect := Rect2(
+				Vector2(-(ring_radius_x + 11.0), -(ring_radius_y + 10.0)),
+				Vector2((ring_radius_x + 11.0) * 2.0, (ring_radius_y + 10.0) * 2.0)
+			)
+			draw_texture_rect(active_ring_texture, ring_rect, false, Color(1.0, 1.0, 1.0, 0.90))
+		else:
+			_draw_polyline_closed(
+				_make_ellipse(Vector2.ZERO, ring_radius_x + 5.0, ring_radius_y + 2.0),
+				Color(0.54, 0.92, 0.82, 0.20),
+				1.0
+			)
 	elif show_name:
 		_draw_polyline_closed(
 			_make_ellipse(Vector2.ZERO, ring_radius_x + 2.0, ring_radius_y + 1.0),
@@ -324,15 +363,15 @@ func _draw_direction_marker(show_direction: bool) -> void:
 			pointer = PackedVector2Array([center + Vector2(-size - 2.0, 0.0), center + Vector2(0.0, -size), center + Vector2(0.0, size)])
 		_:
 			pointer = PackedVector2Array([center + Vector2(size + 2.0, 0.0), center + Vector2(0.0, -size), center + Vector2(0.0, size)])
-	draw_colored_polygon(pointer, Color(1.0, 0.92, 0.66, 0.24))
+	draw_colored_polygon(pointer, Color(1.0, 0.92, 0.66, 0.16))
 
 
 func _draw_overhead_info() -> void:
 	var desired_height := _get_visual_height()
-	var bar_width := clampf(board_cell_size.x * 0.70, 28.0, 44.0)
-	var hp_height := clampf(board_cell_size.y * 0.085, 3.0, 5.0)
-	var qi_height := maxf(2.0, hp_height * 0.60)
-	var icon_size := clampf(board_cell_size.y * 0.20, 10.0, 15.0)
+	var bar_width := clampf(board_cell_size.x * 0.78, 30.0, 52.0)
+	var hp_height := clampf(board_cell_size.y * 0.10, 4.0, 7.0)
+	var qi_height := clampf(hp_height * 0.72, 2.5, 4.5)
+	var icon_size := clampf(board_cell_size.y * 0.22, 12.0, 18.0)
 	var total_width := bar_width + icon_size + 6.0
 	var origin := Vector2(-total_width * 0.5, -desired_height - 8.0)
 	var hp_origin := origin
@@ -382,8 +421,17 @@ func _draw_name_label(show_name: bool) -> void:
 		return
 	var desired_height := _get_visual_height()
 	var label_y := -desired_height - 18.0
-	var label_color := Color(1.0, 0.98, 0.94, 0.70 if hovered else 0.82)
-	draw_string(font, Vector2(-26.0, label_y), display_name, HORIZONTAL_ALIGNMENT_CENTER, 52.0, 10, label_color)
+	var label_color := Color(1.0, 0.98, 0.94, 0.82 if hovered else 0.90)
+	_draw_outlined_string(
+		font,
+		Vector2(-28.0, label_y),
+		display_name,
+		56.0,
+		11,
+		label_color,
+		BattleVisuals.get_outline_color(),
+		1.0
+	)
 
 
 func _ensure_visual_nodes() -> void:
@@ -443,6 +491,27 @@ func _draw_polyline_closed(points: Array[Vector2], color: Color, width: float) -
 	var line_points := PackedVector2Array(points)
 	line_points.append(points[0])
 	draw_polyline(line_points, color, width, true)
+
+
+func _draw_outlined_string(
+	font: Font,
+	position_value: Vector2,
+	text: String,
+	width_value: float,
+	font_size: int,
+	color: Color,
+	outline_color: Color,
+	outline_offset: float
+) -> void:
+	var offsets := [
+		Vector2(-outline_offset, 0.0),
+		Vector2(outline_offset, 0.0),
+		Vector2(0.0, -outline_offset),
+		Vector2(0.0, outline_offset)
+	]
+	for offset in offsets:
+		draw_string(font, position_value + offset, text, HORIZONTAL_ALIGNMENT_CENTER, width_value, font_size, outline_color)
+	draw_string(font, position_value, text, HORIZONTAL_ALIGNMENT_CENTER, width_value, font_size, color)
 
 
 func _merged_visuals(base_visuals: Dictionary, override_visuals: Dictionary) -> Dictionary:
